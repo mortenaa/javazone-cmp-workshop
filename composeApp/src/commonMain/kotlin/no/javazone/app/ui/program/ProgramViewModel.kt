@@ -3,6 +3,7 @@ package no.javazone.app.ui.program
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlin.time.Clock
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,22 +13,21 @@ import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import no.javazone.app.data.ProgramDto
-import no.javazone.app.data.ProgramJson
-import no.javazone.app.data.toSession
+import no.javazone.app.data.ProgramRepository
 import no.javazone.app.model.Session
 import no.javazone.app.model.toConferenceDays
-import no.javazone.app.resources.Res
 
 /**
  * Owns the program data and favorites; the UI only sends [ProgramIntent]s.
  *
- * Task 4 version: the program is loaded straight from the bundled resource and
- * favorites are an in-memory [Set] that vanishes on restart. Task 5 swaps the
- * load for a Ktor fetch behind a repository, and Task 6 gives favorites a real
- * persistent home — neither of which changes this class's public surface.
+ * Task 5 version: the program now comes from a [ProgramRepository]
+ * (network -> cache -> bundled), which sets the offline flag. Favorites are
+ * still an in-memory [Set] — Task 6 gives them a persistent home without
+ * changing this class's public surface.
  */
-class ProgramViewModel : ViewModel() {
+class ProgramViewModel(
+    private val repository: ProgramRepository = ProgramRepository(),
+) : ViewModel() {
 
     private val _state = MutableStateFlow(ProgramUiState())
     val state: StateFlow<ProgramUiState> = _state.asStateFlow()
@@ -58,14 +58,27 @@ class ProgramViewModel : ViewModel() {
 
     private fun loadProgram() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = it.sessions.isEmpty(), loadFailed = false) }
-            val sessions = loadBundledSessions()
+            // Every (re)load resets the banner dismissal: it may reappear on a
+            // failed refresh and disappears for real once a fetch succeeds (§3.7).
+            // The full-screen spinner only shows when there is nothing to look at.
             _state.update {
-                it.copy(
-                    isLoading = false,
-                    sessions = sessions,
-                    selectedDay = it.selectedDay ?: defaultDay(sessions),
-                )
+                it.copy(isLoading = it.sessions.isEmpty(), loadFailed = false, offlineBannerDismissed = false)
+            }
+            try {
+                val load = repository.loadSessions()
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        sessions = load.sessions,
+                        isOffline = load.isOffline,
+                        selectedDay = it.selectedDay ?: defaultDay(load.sessions),
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Never replace a visible list with the error screen.
+                _state.update { it.copy(isLoading = false, loadFailed = it.sessions.isEmpty()) }
             }
         }
     }
@@ -78,13 +91,6 @@ class ProgramViewModel : ViewModel() {
             ?: dates.firstOrNull { it.dayOfWeek == DayOfWeek.WEDNESDAY }
             ?: dates.firstOrNull()
     }
-}
-
-/** Loads and maps the bundled program.json. Task 5 replaces this with a real network fetch. */
-private suspend fun loadBundledSessions(): List<Session> {
-    val bytes = Res.readBytes("files/program.json")
-    val dto = ProgramJson.decodeFromString(ProgramDto.serializer(), bytes.decodeToString())
-    return dto.sessions.map { it.toSession() }
 }
 
 private fun <T> Set<T>.toggle(value: T): Set<T> = if (value in this) this - value else this + value
