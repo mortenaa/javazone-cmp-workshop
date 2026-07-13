@@ -1,6 +1,7 @@
 package no.javazone.app.ui.info
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,32 +11,50 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import no.javazone.app.ui.components.NauticalBackground
 
-/** Static practical info: a scrollable column of cards, max 840 dp wide on big screens. */
+/**
+ * Static practical info: a scrollable column of cards, max 840 dp wide on big
+ * screens, floating over an animated ocean backdrop.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InfoScreen() {
-    Scaffold(topBar = { TopAppBar(title = { Text("Practical info") }) }) { padding ->
-        Column(
-            modifier = Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+    Box(Modifier.fillMaxSize()) {
+        NauticalBackground(Modifier.fillMaxSize())
+        Scaffold(
+            containerColor = Color.Transparent, // let the ocean show through
+            topBar = {
+                TopAppBar(
+                    title = { Text("Practical info") },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                )
+            },
+        ) { padding ->
             Column(
-                modifier = Modifier.widthIn(max = 840.dp).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                infoSections.forEach { InfoCard(it) }
+                Column(
+                    modifier = Modifier.widthIn(max = 840.dp).padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    infoSections.forEach { InfoCard(it) }
+                }
             }
         }
     }
@@ -43,7 +62,13 @@ fun InfoScreen() {
 
 @Composable
 private fun InfoCard(section: InfoSection) {
-    Card(Modifier.fillMaxWidth()) {
+    // Translucent so the ocean and bubbles stay visible behind the text.
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+        ),
+    ) {
         Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Icon(section.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
