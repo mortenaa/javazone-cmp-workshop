@@ -26,10 +26,10 @@ covers every task**, and we demo iOS from the stage.
 
 ### Required for everyone
 
-- **JDK 21** — see the note below on *why 21 specifically*. You do not have to
-  install it by hand: the Gradle build provisions a JDK 21 toolchain
-  automatically (that is part of what `verifySetup` triggers). You do need *a*
-  JDK to launch Gradle itself; JDK 17 or 21 is fine for that.
+- **A JDK** — any recent version, just to launch Gradle (your IDE bundles one).
+  You do *not* need to install JDK 21 by hand: the build provisions the JDK 21
+  toolchain automatically (part of what `verifySetup` triggers). See the note
+  below on *why 21 specifically* and the launcher-vs-toolchain distinction.
 - **IntelliJ IDEA** (2025.1+) **or Android Studio** (latest stable), with the
   **Kotlin Multiplatform plugin** installed (Settings → Plugins → Marketplace →
   search "Kotlin Multiplatform").
@@ -46,9 +46,12 @@ covers every task**, and we demo iOS from the stage.
 
 ## 2. Install steps
 
-1. **Install a JDK** (21 recommended). On macOS: `brew install openjdk@21`.
-   On Windows/Linux use [Adoptium Temurin 21](https://adoptium.net/). Confirm
-   with `java -version`.
+1. **Make sure a JDK is available to launch Gradle** — *any* recent version.
+   IntelliJ IDEA and Android Studio bundle one, so you can usually skip a manual
+   install. If you'd rather have one on the command line, install JDK 21 (macOS:
+   `brew install openjdk@21`; Windows/Linux: [Adoptium Temurin 21](https://adoptium.net/))
+   and confirm with `java -version`. Installing *exactly* 21 is optional — this JDK
+   only starts Gradle; see the note below on the toolchain that builds the app.
 2. **Install IntelliJ IDEA or Android Studio**, then add the **Kotlin
    Multiplatform plugin** and restart the IDE.
 3. **Install the Android SDK.** Easiest via Android Studio:
@@ -59,9 +62,11 @@ covers every task**, and we demo iOS from the stage.
 5. **(Mac) Install Xcode** and run `xcode-select --install`.
 6. **Clone the repo and verify** (see below).
 
-The build auto-downloads the JDK 21 toolchain via the
-[foojay resolver](https://github.com/gradle/foojay-toolchains) — you don't
-manage that JDK yourself.
+The JDK from step 1 only *launches* Gradle. The **JDK 21 toolchain** that
+actually compiles and runs the app is a separate thing: the build downloads it
+automatically via the [foojay resolver](https://github.com/gradle/foojay-toolchains)
+if you don't already have a JDK 21 — you never install or manage that toolchain
+by hand.
 
 ---
 
