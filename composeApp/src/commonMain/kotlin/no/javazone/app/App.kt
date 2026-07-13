@@ -1,98 +1,138 @@
 package no.javazone.app
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Place
-import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import no.javazone.app.data.ProgramDto
-import no.javazone.app.data.ProgramJson
-import no.javazone.app.data.toSession
-import no.javazone.app.model.Session
-import no.javazone.app.resources.Res
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.backhandler.BackHandler
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.savedstate.read
 import no.javazone.app.ui.AdaptiveScaffold
 import no.javazone.app.ui.TopDestination
 import no.javazone.app.ui.WindowWidth
 import no.javazone.app.ui.currentWindowWidth
 import no.javazone.app.ui.components.EmptyState
+import no.javazone.app.ui.components.LoadingState
+import no.javazone.app.ui.detail.SessionDetailScreen
+import no.javazone.app.ui.favorites.ScheduleScreen
+import no.javazone.app.ui.info.InfoScreen
+import no.javazone.app.ui.program.ProgramIntent
 import no.javazone.app.ui.program.ProgramScreen
+import no.javazone.app.ui.program.ProgramViewModel
 import no.javazone.app.ui.theme.JavaZoneTheme
 
-/**
- * Task 3 root: an [AdaptiveScaffold] (bottom bar ↔ nav rail at 600 dp) hosting
- * the four top-level destinations. The Program screen adds its own list-detail
- * split at 840 dp.
- *
- * Navigation is a plain `remember`-ed route for now; Task 4 swaps it for
- * navigation-compose and a real ViewModel, and the Info/Map/Schedule tabs get
- * real content in Tasks 4 and 6.
- */
+/** Root composable: theme, one shared ViewModel (manual wiring, no DI), adaptive scaffold, NavHost. */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun App() {
     JavaZoneTheme {
-        val sessions by produceState<List<Session>?>(initialValue = null) {
-            value = loadBundledSessions()
-        }
+        val viewModel: ProgramViewModel = viewModel { ProgramViewModel() }
+        val state by viewModel.state.collectAsState()
+        val navController = rememberNavController()
         val windowWidth = currentWindowWidth()
         val expanded = windowWidth == WindowWidth.Expanded
-        var currentRoute by remember { mutableStateOf(TopDestination.Program.route) }
+        val backStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = backStackEntry?.destination?.route
 
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            AdaptiveScaffold(
-                windowWidth = windowWidth,
-                currentRoute = currentRoute,
-                onNavigate = { currentRoute = it },
-            ) {
-                val loaded = sessions
-                if (loaded == null) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                } else {
-                    when (currentRoute) {
-                        TopDestination.Program.route -> ProgramScreen(loaded, expanded)
-                        TopDestination.Schedule.route -> EmptyState(
-                            icon = Icons.Outlined.Star,
-                            title = "My schedule",
-                            body = "Coming in Task 4 — mark sessions with the star.",
+        // Standard M3 top-level navigation: tabs keep their state, back returns to Program.
+        fun navigateTopLevel(route: String) {
+            navController.navigate(route) {
+                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+
+        // On expanded windows the detail is the second pane — state, not navigation (§2.3).
+        fun openSession(sessionId: String) {
+            viewModel.onIntent(ProgramIntent.SelectSession(sessionId))
+            if (!expanded) navController.navigate("session/$sessionId")
+        }
+
+        // The detail pane only exists on the Program and My Schedule tabs.
+        val onListDetailTab = currentRoute == TopDestination.Program.route ||
+            currentRoute == TopDestination.Schedule.route
+
+        // Back/Esc on expanded windows clears the pane selection first (§1.3) —
+        // but only where the pane is actually visible.
+        BackHandler(enabled = expanded && onListDetailTab && state.selectedSessionId != null) {
+            viewModel.onIntent(ProgramIntent.SelectSession(null))
+        }
+
+        // Window resized across the 840 dp breakpoint: keep the open detail visible (§2.3).
+        var wasExpanded by remember { mutableStateOf(expanded) }
+        LaunchedEffect(expanded) {
+            val route = navController.currentBackStackEntry?.destination?.route
+            val onDetailRoute = route?.startsWith("session") == true
+            val onPaneTab = route == TopDestination.Program.route ||
+                route == TopDestination.Schedule.route
+            when {
+                expanded && !wasExpanded && onDetailRoute ->
+                    navController.navigateUp() // the pane takes over via selectedSessionId
+                !expanded && wasExpanded && onPaneTab && state.selectedSessionId != null ->
+                    navController.navigate("session/${state.selectedSessionId}")
+            }
+            wasExpanded = expanded
+        }
+
+        AdaptiveScaffold(windowWidth, currentRoute, onNavigate = ::navigateTopLevel) {
+            NavHost(navController, startDestination = TopDestination.Program.route) {
+                composable(TopDestination.Program.route) {
+                    ProgramScreen(state, viewModel::onIntent, expanded, onOpenSession = ::openSession)
+                }
+                composable(TopDestination.Schedule.route) {
+                    ScheduleScreen(
+                        state = state,
+                        onIntent = viewModel::onIntent,
+                        expanded = expanded,
+                        onOpenSession = ::openSession,
+                        onBrowseProgram = { navigateTopLevel(TopDestination.Program.route) },
+                    )
+                }
+                composable(TopDestination.Info.route) { InfoScreen() }
+                composable(TopDestination.Map.route) {
+                    // The venue map is a Task 6 stretch — placeholder until then.
+                    EmptyState(
+                        icon = Icons.Outlined.Place,
+                        title = "Venue map",
+                        body = "Coming in Task 6.",
+                    )
+                }
+                composable("session/{sessionId}") { entry ->
+                    // The route argument is the source of truth: it survives Android
+                    // process death, where the ViewModel's selection state does not.
+                    val sessionId = entry.arguments?.read { getStringOrNull("sessionId") }
+                    val session = state.session(sessionId)
+                    when {
+                        session != null -> SessionDetailScreen(
+                            session = session,
+                            isFavorite = session.id in state.favoriteIds,
+                            onBack = { navController.navigateUp() },
+                            onToggleFavorite = { viewModel.onIntent(ProgramIntent.ToggleFavorite(session.id)) },
                         )
-                        TopDestination.Info.route -> EmptyState(
-                            icon = Icons.Outlined.Info,
-                            title = "Practical info",
-                            body = "Coming in Task 4.",
-                        )
-                        TopDestination.Map.route -> EmptyState(
-                            icon = Icons.Outlined.Place,
-                            title = "Venue map",
-                            body = "Coming in Task 6.",
+                        state.isLoading -> LoadingState()
+                        else -> EmptyState(
+                            icon = Icons.Outlined.Warning,
+                            title = "Session not found",
+                            body = "This session is not in the current program.",
+                            actionLabel = "Back to program",
+                            onAction = { navigateTopLevel(TopDestination.Program.route) },
                         )
                     }
                 }
             }
         }
     }
-}
-
-/** Loads and maps the bundled program.json. Task 5 replaces this with a real network fetch. */
-private suspend fun loadBundledSessions(): List<Session> {
-    val bytes = Res.readBytes("files/program.json")
-    val dto = ProgramJson.decodeFromString(ProgramDto.serializer(), bytes.decodeToString())
-    return dto.sessions.map { it.toSession() }
 }
