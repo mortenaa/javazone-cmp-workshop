@@ -1,9 +1,10 @@
 # Stretch tasks
 
 For the fast, the curious, and the flight home. Two flavours: some have a full
-reference implementation in `checkpoint-6`, some are genuinely open.
+reference implementation (in `checkpoint-6` or a dedicated branch), some are
+genuinely open.
 
-## With a reference implementation (`checkpoint-6`)
+## With a reference implementation
 
 ### 🗺 Venue map
 
@@ -33,6 +34,22 @@ switch in Info, say) instead of only following the system setting. Hoist the
 choice into state and pass it to the theme.
 
 *Reference:* `ui/theme/Theme.kt` (the `darkTheme` parameter is there from `main`).
+
+### 🌊 Nautical animated background
+
+Give the app JavaZone's underwater feel: a full-screen ocean behind the Info
+screen, with a wavy surface near the top, bubbles drifting upward and dissolving
+as they reach the surface, and the content floating over it on translucent cards.
+It is **100% shared Compose drawing and animation** — no platform code — so the
+one implementation runs identically on Android, iOS, Desktop and Web. This is the
+graphics layer the core tasks deliberately skip, and a great tour of it: `Canvas`,
+`Path`, `Brush` and `clipPath` for the water, a per-frame clock (`withFrameNanos`)
+for the bubbles, and an `rememberInfiniteTransition` for the wave. Good knobs to
+play with: `surfaceFraction` (waterline height), `bubbleCount`, and the fade band.
+
+*Reference:* a dedicated branch — `git checkout stretch/nautical-animation`, then
+see `ui/components/NauticalBackground.kt` and how `ui/info/InfoScreen.kt` layers
+content over it. Kept off the main line because it is pure decoration.
 
 ## Open-ended — no solution provided
 
