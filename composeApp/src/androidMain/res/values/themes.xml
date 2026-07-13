@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Day/night pair (see values-night/) so the pre-Compose window doesn't flash white on dark devices. -->
+<resources>
+    <style name="Theme.JavaZone" parent="@android:style/Theme.Material.Light.NoActionBar" />
+</resources>
