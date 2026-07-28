@@ -17,6 +17,7 @@ fun SessionList(
     favoriteIds: Set<String>,
     onSessionClick: (String) -> Unit,
     onToggleFavorite: (String) -> Unit,
+    selectedSessionId: String? = null,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -31,6 +32,7 @@ fun SessionList(
                     isFavorite = session.id in favoriteIds,
                     onClick = { onSessionClick(session.id) },
                     onToggleFavorite = { onToggleFavorite(session.id) },
+                    selected = session.id == selectedSessionId,
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
             }

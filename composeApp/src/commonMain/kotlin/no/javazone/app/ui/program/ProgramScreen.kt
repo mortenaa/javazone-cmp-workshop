@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -15,23 +16,26 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import no.javazone.app.model.Session
 import no.javazone.app.model.toConferenceDays
 import no.javazone.app.ui.components.DayTabRow
 import no.javazone.app.ui.components.EmptyState
+import no.javazone.app.ui.components.ListDetailLayout
 import no.javazone.app.ui.components.SessionList
 
 /**
- * Task 2: day tabs over a sticky-header session list.
- * Selected day and favorites still live in plain `remember` here — Task 4
- * moves this into a ViewModel.
+ * Task 3: the Task 2 list, now inside a [ListDetailLayout]. On expanded windows
+ * the tapped session becomes the right-hand pane (state), not a navigation
+ * destination — Task 4 adds the pushed-route version for narrower windows.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProgramScreen(sessions: List<Session>) {
+fun ProgramScreen(sessions: List<Session>, expanded: Boolean) {
     val days = remember(sessions) { sessions.toConferenceDays() }
     var selectedDay by remember(days) { mutableStateOf(days.firstOrNull()?.date) }
     var favoriteIds by remember { mutableStateOf(emptySet<String>()) }
+    var selectedSessionId by remember { mutableStateOf<String?>(null) }
 
     Scaffold(topBar = { TopAppBar(title = { Text("JavaZone 2026") }) }) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
@@ -40,24 +44,47 @@ fun ProgramScreen(sessions: List<Session>) {
             val slots = remember(days, selectedDay) {
                 days.firstOrNull { it.date == selectedDay }?.slots.orEmpty()
             }
-            if (slots.isEmpty()) {
-                EmptyState(
-                    icon = Icons.Outlined.DateRange,
-                    title = "No sessions",
-                    body = "There are no sessions on this day.",
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                SessionList(
-                    slots = slots,
-                    favoriteIds = favoriteIds,
-                    onSessionClick = {},
-                    onToggleFavorite = { id ->
-                        favoriteIds = if (id in favoriteIds) favoriteIds - id else favoriteIds + id
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+            ListDetailLayout(
+                expanded = expanded,
+                list = {
+                    if (slots.isEmpty()) {
+                        EmptyState(
+                            icon = Icons.Outlined.DateRange,
+                            title = "No sessions",
+                            body = "There are no sessions on this day.",
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        SessionList(
+                            slots = slots,
+                            favoriteIds = favoriteIds,
+                            onSessionClick = { selectedSessionId = it },
+                            onToggleFavorite = { id ->
+                                favoriteIds = if (id in favoriteIds) favoriteIds - id else favoriteIds + id
+                            },
+                            selectedSessionId = if (expanded) selectedSessionId else null,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                },
+                detail = {
+                    val session = sessions.firstOrNull { it.id == selectedSessionId }
+                    if (session == null) {
+                        EmptyState(
+                            icon = Icons.Outlined.DateRange,
+                            title = "Select a session",
+                            body = "Pick a session from the list to see its details.",
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        Text(
+                            session.title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                },
+            )
         }
     }
 }

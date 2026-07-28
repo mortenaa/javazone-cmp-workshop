@@ -206,3 +206,65 @@ compiled clean across JVM/Android/wasm/iOS. The Desktop app ran with day
 tabs and sticky headers with no runtime exceptions.
 
 ---
+
+## Task 3 — Adaptive layout
+
+⚠️ **The task doc never says what to put in the "detail" pane, and that's
+a bigger gap than it looks.** Step 4/5 tell you to build `ListDetailLayout`
+and track a `selectedSessionId`, "so the chosen card highlights in the
+two-pane view" — but nothing in task-3.md's steps or hints says what the
+`detail` slot itself should render. `checkpoint-3` answers this by already
+building a fairly complete `SessionDetailContent` (title, format badge,
+language tag, time/room, favorite button, abstract, speakers, keywords,
+workshop prerequisites — a good ~100 lines across two files) — content that
+reads much more like Task 4/detail-screen material than "adaptive layout."
+Since the task doc doesn't ask for any of that, a participant following
+task-3.md literally would reasonably put a one-line placeholder in the
+detail slot (I did — just the session title) and still satisfy every stated
+"Done when" item (`selected` highlighting, two panes at ≥840dp). That's a
+perfectly valid reading of the instructions, but it means their screen will
+look noticeably less finished than `checkpoint-3`'s when they compare
+afterward, for reasons the task doc itself never flagged. Worth either (a)
+explicitly scoping the detail pane to "a placeholder — the real detail
+screen is Task 4" in task-3.md, or (b) moving a one-line version of
+`SessionDetailContent` into Task 3's steps if the intent really is to have
+it fleshed out this early.
+
+⚠️ **Live-resize verification (the task's own step 6 and the slide's "the
+demo you'll be showing your team next week") could not be confirmed in this
+environment, and it's worth knowing why before assuming it's fine
+elsewhere.** I couldn't drag a window with a mouse from the CLI, so I
+patched a temporary debug build of `main.kt` that (a) opened the Desktop
+window at an explicit width via `WindowState(width = …)`, driven by a
+`-Dtest.windowWidthDp` system property, and (b) logged
+`currentWindowWidth()` on every change. Requesting **500 dp** logged
+`Compact` and then, within the same run, immediately re-logged `Expanded`;
+requesting **700 dp** did the exact same Compact-then-Expanded flip. Since
+two different requested widths converged on the same final state, this
+reads like the window manager in this sandboxed/automated environment
+silently resizing or refusing to honor the small requested frame — not a
+bug in `currentWindowWidth()` or `AdaptiveScaffold`, which are verbatim the
+documented `material3-adaptive` pattern from the slide and match
+`checkpoint-3` exactly. I'm flagging it rather than either hiding it or
+claiming I verified live-resize behavior: **I could not,** in this sandbox,
+confirm the breakpoint transition visually or via real window-drag
+interaction — only that the code compiles identically to the reference on
+all four targets and that `currentWindowWidth()` does read *some* value
+without crashing. A sighted run through this exact step, on a normal
+desktop session, is worth doing before trusting that this task's "resize
+and watch it adapt" payoff moment works as smoothly live as the slides
+promise — I have no reason to think it won't (the API is JetBrains' own,
+widely used), I simply couldn't personally confirm it here.
+
+✅ `TopDestination`, `WindowWidth`/`currentWindowWidth()`, `AdaptiveScaffold`
+(bar↔rail at the 600 dp breakpoint) and `ListDetailLayout` (weighted
+0.42/0.58 row at the 840 dp breakpoint) all matched Hint 2/3's shapes
+closely and compiled clean on JVM/Android/wasm/iOS. The `selected` highlight
+plumbed through `SessionList` → `SessionCard` (added the actual
+`CardDefaults.cardColors(containerColor = surfaceContainerHighest)` visual
+effect in `SessionCard`, since Task 1 only declared the `selected`
+parameter without using it — task-1.md flags this as optional/stretch, and
+Task 3 is correctly where it becomes load-bearing, exactly as task-3.md's
+closing note says it would).
+
+---
