@@ -330,3 +330,111 @@ Tasks 5/6, not to what a participant following task-4.md alone would be
 expected to produce.
 
 ---
+
+## Task 5 — Fetch the program
+
+🐛🐛🐛 **The real, hosted `program.json` URL breaks the exact `ContentNegotiation`
+setup task-5.md and the slide instruct you to write — every participant on
+every platform will hit this, and it defeats the task's own "online vs
+offline" demo.** `raw.githubusercontent.com` serves `.json` files with
+`Content-Type: text/plain; charset=utf-8` (confirmed independently with
+`curl -sSD - -o /dev/null https://raw.githubusercontent.com/mortenaa/javazone-cmp-workshop/main/program.json`
+→ `content-type: text/plain; charset=utf-8`, plus `x-content-type-options:
+nosniff` — this is GitHub raw's standard behavior for every file it serves,
+not a fluke of this particular repo). Ktor's `ContentNegotiation` +
+`kotlinx.serialization` `json()` plugin, exactly as task-5.md's Hint 2
+instructs (`install(ContentNegotiation) { json(ProgramJson) }`), only
+auto-deserializes a response whose `Content-Type` matches
+`application/json` by default. Point `client.get(PROGRAM_URL).body<ProgramDto>()`
+— literally `task-5.md`'s own Hint 2 code — at the real URL and every single
+fetch throws:
+
+```
+io.ktor.client.call.NoTransformationFoundException: Expected response body of the
+type 'class no.javazone.app.data.ProgramDto' but was 'class
+io.ktor.utils.io.SourceByteReadChannel'. In response from
+`https://raw.githubusercontent.com/mortenaa/javazone-cmp-workshop/main/program.json`.
+Response status `200`. Response header `ContentType: text/plain; charset=utf-8`.
+```
+
+I verified this two ways: (1) a scratch JVM test calling
+`ProgramApi().fetchProgram()` directly against the real URL — reproduced the
+exact exception above on the first try; (2) `curl` against the same URL,
+independent of any Kotlin/Ktor code, confirming the `text/plain` header is
+real and not a client-side artifact. **This means Task 5's own verification
+step — "turn wifi off, relaunch → real data with offline banner" — cannot
+show what it claims to.** With the code built exactly as instructed, the
+network fetch fails *every time*, wifi on or off, so a participant doing
+that test would see the offline banner and bundled data in both cases and
+have no way to tell "it worked online" from "it's broken" — the entire
+point of the exercise (see the network path actually being live) silently
+never happens. Every one of the 156 sessions still loads (via the bundled
+fallback), so **nothing in the UI signals that anything is wrong** — the app
+looks and behaves exactly as the task doc says it should, which makes this
+particularly nasty to notice without either reading Ktor exception logs or
+independently checking the response headers, as I did here.
+
+I confirmed the reference solution has the identical bug: `checkpoint-5`'s
+`ProgramApi.kt` is byte-for-byte the same `install(ContentNegotiation) {
+json(ProgramJson) }` with no content-type override. My best guess for how
+this shipped unnoticed: the workshop's own automated tests (per the Block 4
+slide) exercise the repository via Ktor's `MockEngine`, which returns
+whatever content type the test tells it to (`application/json` in the
+slide's own test example) — so the test suite would never touch the real
+server's actual headers, and a manual smoke test against the live URL is
+easy to skip once the bundled-fallback path makes the app look fine
+regardless.
+
+**Fix I applied** (and verified resolves it — same scratch test then
+reported success and `sessions=156` via the live fetch): register the
+`text/plain` content type against the same JSON converter, since the
+`ContentNegotiation` DSL supports registering one converter for multiple
+content types:
+
+```kotlin
+install(ContentNegotiation) {
+    json(ProgramJson)
+    // raw.githubusercontent.com serves .json as text/plain — accept that too.
+    json(ProgramJson, contentType = ContentType.Text.Plain)
+}
+```
+
+An equally valid alternative (more defensive against any future header
+change, at the cost of bypassing `ContentNegotiation` for this one call) is
+fetching as text and decoding manually, the same pattern `bundledProgram()`
+already uses: `ProgramJson.decodeFromString(ProgramDto.serializer(),
+client.get(PROGRAM_URL).bodyAsText())`. Either belongs in task-5.md itself —
+right now nothing in the task doc, its hints, or the slide's "Real-world
+JSON is messy" section (which only covers `ignoreUnknownKeys`/`isLenient` —
+JSON-syntax leniency, not HTTP content-type negotiation) prepares a
+participant for this, and it isn't something Task 5's own troubleshooting
+notes ("watch for: forgetting the timeout... swallowing
+CancellationException") mention either.
+
+⚠️ **The slide claims `PROGRAM_URL` "is in the starter" — it is not.** The
+Task 5 slide's speaker notes say: "Shorter task, mostly assembling pieces
+you've now seen. The URL constant is in the starter." I grepped the entire
+repository at `main` (the actual starter state) for `PROGRAM_URL` and
+`raw.githubusercontent` and found nothing — the constant first appears in
+`checkpoint-5`'s `ProgramApi.kt`, i.e. it's part of what Task 5 has you
+write, not something already provided. task-5.md itself gets this right (it
+gives you the literal URL string to use in your own `const val`), so the
+inconsistency is specifically in the slide's speaker notes, not the task
+doc. Small thing on its own, but combined with the content-type bug above,
+anyone stage-presenting from the slide as written would tell a room full of
+people "the constant's already there" and then everyone's fetch fails
+anyway — worth fixing both while in there.
+
+✅ Once the content-type fix was in place: `ProgramApi`, `ProgramRepository`
+(network → cache → bundled, `CancellationException` rethrown before the
+broad catch, exactly as Hint 1's "two gotchas" warns), the `ProgramUiState`
+additions (`isLoading`/`loadFailed`/`isOffline`/`offlineBannerDismissed`/
+`showOfflineBanner`), `ProgramViewModel`'s `Retry`/`DismissOfflineBanner`
+handling, and `OfflineBanner` all matched the task doc and `checkpoint-5`
+closely and compiled clean on all four targets. Verified both branches
+directly against `ProgramRepository` (bypassing the UI, in the spirit of the
+Block 4 testing slide): a real fetch against the live URL now succeeds
+(`sessions=156`, `isOffline=false`), and a `MockEngine` configured to throw
+falls back to bundled data with `isOffline=true` — the fallback chain
+itself is correct.
+

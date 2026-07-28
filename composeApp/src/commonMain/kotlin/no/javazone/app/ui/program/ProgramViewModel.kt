@@ -2,26 +2,25 @@ package no.javazone.app.ui.program
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import no.javazone.app.data.ProgramDto
-import no.javazone.app.data.ProgramJson
-import no.javazone.app.data.toSession
-import no.javazone.app.model.Session
-import no.javazone.app.resources.Res
+import no.javazone.app.data.ProgramRepository
 
 /**
  * Owns the program data and favorites; the UI only sends [ProgramIntent]s.
  *
- * Task 4 version: the program loads straight from the bundled resource and
- * favorites are an in-memory [Set] that vanishes on restart — Task 5 swaps the
- * load for a Ktor-backed repository, and Task 6 persists favorites, neither of
- * which changes this class's public surface.
+ * Task 5 version: the program comes from a [ProgramRepository]
+ * (network -> cache -> bundled), which sets the offline flag. Favorites are
+ * still an in-memory [Set] — Task 6 gives them a persistent home without
+ * changing this class's public surface.
  */
-class ProgramViewModel : ViewModel() {
+class ProgramViewModel(
+    private val repository: ProgramRepository = ProgramRepository(),
+) : ViewModel() {
 
     private val _state = MutableStateFlow(ProgramUiState())
     val state: StateFlow<ProgramUiState> = _state.asStateFlow()
@@ -45,31 +44,33 @@ class ProgramViewModel : ViewModel() {
                 _state.update { it.copy(favoriteIds = it.favoriteIds.toggle(intent.sessionId)) }
             is ProgramIntent.SelectSession -> _state.update { it.copy(selectedSessionId = intent.sessionId) }
             ProgramIntent.Retry -> loadProgram()
-            // No-op until Task 5 introduces isOffline/the offline banner.
-            ProgramIntent.DismissOfflineBanner -> Unit
+            ProgramIntent.DismissOfflineBanner -> _state.update { it.copy(offlineBannerDismissed = true) }
         }
     }
 
     private fun loadProgram() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = it.sessions.isEmpty()) }
-            val sessions = loadBundledSessions()
             _state.update {
-                it.copy(
-                    isLoading = false,
-                    sessions = sessions,
-                    selectedDay = it.selectedDay ?: sessions.firstOrNull()?.let { s -> s.startSlot?.date },
-                )
+                it.copy(isLoading = it.sessions.isEmpty(), loadFailed = false, offlineBannerDismissed = false)
+            }
+            try {
+                val load = repository.loadSessions()
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        sessions = load.sessions,
+                        isOffline = load.isOffline,
+                        selectedDay = it.selectedDay ?: load.sessions.firstOrNull()?.startSlot?.date,
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Never replace a visible list with an error screen.
+                _state.update { it.copy(isLoading = false, loadFailed = it.sessions.isEmpty()) }
             }
         }
     }
-}
-
-/** Loads and maps the bundled program.json. Task 5 replaces this with a real network fetch. */
-private suspend fun loadBundledSessions(): List<Session> {
-    val bytes = Res.readBytes("files/program.json")
-    val dto = ProgramJson.decodeFromString(ProgramDto.serializer(), bytes.decodeToString())
-    return dto.sessions.map { it.toSession() }
 }
 
 private fun <T> Set<T>.toggle(value: T): Set<T> = if (value in this) this - value else this + value

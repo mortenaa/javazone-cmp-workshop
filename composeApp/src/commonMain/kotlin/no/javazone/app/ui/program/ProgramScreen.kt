@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import no.javazone.app.ui.components.DayTabRow
 import no.javazone.app.ui.components.EmptyState
 import no.javazone.app.ui.components.ListDetailLayout
+import no.javazone.app.ui.components.OfflineBanner
 import no.javazone.app.ui.components.SessionList
 import no.javazone.app.ui.detail.SessionDetailContent
 
@@ -33,6 +34,9 @@ fun ProgramScreen(
 ) {
     Scaffold(topBar = { TopAppBar(title = { Text("JavaZone 2026") }) }) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
+            if (state.showOfflineBanner) {
+                OfflineBanner(onDismiss = { onIntent(ProgramIntent.DismissOfflineBanner) })
+            }
             DayTabRow(state.dayTabs, state.selectedDay) { onIntent(ProgramIntent.SelectDay(it)) }
 
             val slots = remember(state) { state.daySlots(state.selectedDay) }

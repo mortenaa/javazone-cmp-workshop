@@ -9,6 +9,9 @@ import no.javazone.app.model.toConferenceDays
 /** Single immutable snapshot of everything the program screens render. */
 data class ProgramUiState(
     val isLoading: Boolean = true,
+    val loadFailed: Boolean = false,
+    val isOffline: Boolean = false,
+    val offlineBannerDismissed: Boolean = false,
     val sessions: List<Session> = emptyList(),
     val favoriteIds: Set<String> = emptySet(),
     val selectedDay: LocalDate? = null,
@@ -18,6 +21,8 @@ data class ProgramUiState(
     val selectedSessionId: String? = null,
 ) {
     val dayTabs: List<LocalDate> get() = sessions.toConferenceDays().map { it.date }
+
+    val showOfflineBanner: Boolean get() = isOffline && !offlineBannerDismissed
 
     fun session(id: String?): Session? = sessions.firstOrNull { it.id == id }
 
