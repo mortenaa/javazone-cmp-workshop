@@ -162,3 +162,47 @@ newcomer might wonder whether they're doing it "wrong" by inlining them
 first. No change needed, this is intentionally left as taste.
 
 ---
+
+## Task 2 — Program list
+
+⚠️ **The "empty day shows `EmptyState`" done-when item can't actually be
+triggered with the real, provided data — worth a line in the doc.** Task
+2's "Done when" list and the slide's Task 2 recap both include an empty-day
+check ("When a day has no sessions, show the provided `EmptyState`" /
+"Empty day? Use `EmptyState`"). I built the screen exactly as the hints
+describe (`days.firstOrNull { it.date == selectedDay }?.slots.orEmpty()`,
+falling back to `EmptyState` when that's empty) and then went looking for a
+day to actually see it on. There isn't one: `toConferenceDays()`
+(`model/Schedule.kt`) only ever produces a `ConferenceDay` for a date that
+already has at least one session grouped into it — `dates` is built from
+`byDate.keys` (dates with scheduled sessions) plus, optionally, a
+`tbaDate` that is only added when there's at least one unscheduled session
+to put in it. So **every `ConferenceDay` the function returns is
+structurally guaranteed to have a non-empty `slots` list.** I confirmed
+against the actual bundled `program.json`: all 156 sessions have a non-null
+`startSlot`, spread across exactly three dates (2026-09-01/02/03), so there
+is no "Time TBA" day either. With the screen built exactly as instructed,
+the only way the `EmptyState` branch runs is a transient state that can't
+happen in this simple (non-filtered) Task 2 screen — `selectedDay` pointing
+at a date that isn't in `days`, which never occurs since both are derived
+together. Net effect: this checklist item is currently unverifiable by
+clicking around the finished Task 2 app with the real data; you'd have to
+temporarily hack in a fake empty day to see it fire at all. Not a bug in
+the code — the `EmptyState` wiring is correct and will matter once Task 4
+adds search/filters that *can* legitimately produce zero results for a
+day — but as a Task 2 acceptance criterion on its own it's checking
+something the task's own data model can't produce yet. Worth either
+dropping it from Task 2's checklist (and introducing it properly once
+filters exist in Task 4) or adding a one-line aside acknowledging you can't
+actually see it fire until then.
+
+✅ Everything else matched the reference exactly in shape: `SessionList`
+(`LazyColumn` + `stickyHeader` + stable `key`s), `TimeSlotHeader` (including
+the `semantics { heading() }` accessibility detail from the slide, which
+the task doc itself doesn't mention — only the slide's "Modifiers" section
+does, so it's easy to miss if someone only reads the task doc and skips that
+slide), and `DayTabRow` built on `PrimaryTabRow` all worked first try and
+compiled clean across JVM/Android/wasm/iOS. The Desktop app ran with day
+tabs and sticky headers with no runtime exceptions.
+
+---
