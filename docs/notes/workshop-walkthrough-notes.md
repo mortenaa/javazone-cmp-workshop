@@ -11,6 +11,50 @@ out wherever it changes what "done" looks like.
 Legend: 🐛 likely bug/error · ⚠️ unclear or could be explained better · 💡 works
 as documented, minor polish suggestion · ✅ verified working as described.
 
+## Executive summary — fix these before the workshop, in priority order
+
+1. **(Task 5, severity: high) The real hosted `program.json` URL breaks the
+   exact Ktor `ContentNegotiation` setup the task doc and slide tell you to
+   write, for every participant, on every platform, every time.**
+   `raw.githubusercontent.com` serves `.json` as `Content-Type: text/plain`,
+   which Ktor's default JSON converter matching doesn't accept, so
+   `client.get(PROGRAM_URL).body<ProgramDto>()` throws
+   `NoTransformationFoundException` on a real 200 response. The bundled
+   fallback silently absorbs the failure, so **the app looks correct while
+   the network path never actually works** — and Task 5's own verification
+   step ("turn wifi off, relaunch → see the difference") can't show a
+   difference, because online and offline behave identically. `checkpoint-5`
+   has the identical bug. Fix: register `ContentType.Text.Plain` on the JSON
+   converter (or fetch as text and decode manually) — see the Task 5 section
+   for the verified fix and root-cause detail.
+2. **(Task 1, severity: medium-high) The `@Preview` import is never shown,
+   and the instinctive choice silently breaks iOS/wasm.** `androidx.compose
+   .ui.tooling.preview.Preview` compiles fine on JVM/Android but doesn't
+   exist on iOS/wasm with this project's dependencies; the working import
+   (`org.jetbrains.compose.ui.tooling.preview.Preview`) triggers a deprecation
+   warning that recommends switching back to the broken one. This can ship
+   silently through Task 1–3 since nobody is required to compile for iOS
+   until later. See the Task 1 section for the fix and suggested doc change.
+3. **(Task 0, severity: medium) `verifySetup` doesn't cover the Web target's
+   actual first-run cost.** It only compiles Kotlin/Wasm; the *real* Task 0
+   command (`wasmJsBrowserDevelopmentRun`) triggers a separate, several-minute
+   first-time Yarn/webpack install that `verifySetup` never touches — exactly
+   the kind of thing the "do this on good wifi at home" instructions exist to
+   prevent.
+4. **(Task 5, severity: low) Slide claims `PROGRAM_URL` "is in the starter"
+   — it isn't**; it's part of what Task 5 has you write. Combined with #1,
+   presenting this slide as-is tells the room the fetch should just work when
+   it won't.
+5. **(Tasks 2–4, severity: low) A handful of small doc/prose gaps** that cost
+   time without blocking progress: Task 2's "empty day" checklist item can't
+   actually be triggered with the real data; Task 3 never specifies what the
+   detail pane should contain; Task 4's `ProgramUiState` field list omits
+   `activeLanguages`, which its own `ToggleLanguage` intent needs; a
+   `LoadingState` composable appears in a slide as if pre-existing but is
+   never asked for in any task doc. Full detail in each task's section below.
+
+Task 6 had no issues — see its section for why.
+
 ---
 
 ## Methodology / environment caveats (read first)
@@ -309,7 +353,12 @@ add it. Minor since the task docs' own hints get by without it (a plain
 it's entirely adequate for Task 4's stated scope) — but worth either adding
 `LoadingState` to the provided-components list in the README/task-0.md, or
 softening the slide's framing so it doesn't read as "already in your
-starter."
+starter." Checking further, `checkpoint-4`'s `ProgramScreen.kt` (a file I
+hadn't compared against until writing this up) leans on it even more than
+`App.kt` does, and also imports a sibling `ErrorState` component that has
+the identical problem — not in the README's provided list, not mentioned in
+any task doc, only discoverable by reading `checkpoint-4` source directly.
+Same fix applies to both.
 
 ✅ Implemented `ProgramUiState` (with the `activeLanguages` fix),
 `ProgramIntent`, and `ProgramViewModel` (private `MutableStateFlow` / public
