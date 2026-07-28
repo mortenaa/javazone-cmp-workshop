@@ -268,3 +268,65 @@ Task 3 is correctly where it becomes load-bearing, exactly as task-3.md's
 closing note says it would).
 
 ---
+
+## Task 4 — `ProgramViewModel` + navigation
+
+⚠️ **Step 1's `ProgramUiState` field list is missing `activeLanguages`,
+which step 2's own `ToggleLanguage` intent needs to do anything.** Task 4,
+step 1 says the state should hold "`sessions`, `favoriteIds`, `selectedDay`,
+`activeFormats`, `searchQuery`, `selectedSessionId`" — no `activeLanguages`.
+Step 2, right below it, asks for a `ToggleLanguage(val language: String)`
+intent alongside `ToggleFormat`. Implemented against step 1's field list
+literally, `ToggleLanguage` has nowhere to write its result — there's an
+`activeFormats: Set<Format>` to toggle into, but no equivalent
+`activeLanguages: Set<String>`. I added the field myself (it's the obvious,
+only-sensible fix, symmetric with `activeFormats`), and confirmed
+`checkpoint-4`'s real `ProgramUiState.kt` does include `activeLanguages` —
+so the reference implementation needs it too, it's just missing from step
+1's prose. Small thing, but it's exactly the kind of gap that costs a
+participant real time mid-task wondering whether they misread something.
+Same file's checklist also omits `isLoading`/`loadFailed`/`isOffline`/
+`offlineBannerDismissed`, which is more defensible since those are
+legitimately Task 5 concerns — but `activeLanguages` isn't forward-looking,
+it's needed for a Task 4 intent to do its Task 4 job.
+
+⚠️ **The slide "UI as functions" shows a `LoadingState` composable as if
+it's existing/provided app code — it isn't, and no task doc ever asks you
+to build it.** The Block 1 slide titled "UI as functions" presents
+`LoadingState` (`…/ui/components/States.kt`) as "a complete, real screen
+state from the app" to teach what a composable is. It reads as a tour of
+existing code, the same way the "Modifiers" and "Lazy lists" slides quote
+real files from the starter. But `LoadingState` is not in the README's
+"provided for you" list, not in any of the six task docs' steps or hints,
+and I could only find it by checking `checkpoint-4`'s `App.kt`, which calls
+it for the "session route resolved but the program is still loading" edge
+case in the navigation `when`. A participant who tries to build that same
+edge case after seeing the slide (or after diffing against `checkpoint-4`,
+which the README explicitly encourages: "compare against `checkpoint-4`")
+would hit an unresolved reference with no task doc pointing at where to
+add it. Minor since the task docs' own hints get by without it (a plain
+`if (session != null) … else …`, no loading branch, is what I built and
+it's entirely adequate for Task 4's stated scope) — but worth either adding
+`LoadingState` to the provided-components list in the README/task-0.md, or
+softening the slide's framing so it doesn't read as "already in your
+starter."
+
+✅ Implemented `ProgramUiState` (with the `activeLanguages` fix),
+`ProgramIntent`, and `ProgramViewModel` (private `MutableStateFlow` / public
+`StateFlow`, exhaustive `when` in `onIntent`) matching Hint 2's shape.
+Rewrote `ProgramScreen` as a pure function of `(state, onIntent, expanded,
+onOpenSession)`, wired `App()` with `viewModel { ProgramViewModel() }`,
+`collectAsState()`, a real `NavHost` with the `session/{sessionId}` route
+reading the argument via `entry.arguments?.read { getStringOrNull(...) }`,
+and navigation from `SessionCard.onClick`. Compiled clean on all four
+targets and ran on Desktop with no exceptions — search/filter logic lives
+as pure functions on `ProgramUiState` per the task's instruction, not in
+composables. I deliberately did **not** replicate `checkpoint-4`'s extra
+polish (the `BackHandler` pane-vs-route sync, live-resize migration between
+pane and pushed route, `ScheduleScreen`/`InfoScreen`, `OfflineBanner`) since
+none of it is asked for by task-4.md's steps or "Done when" list — that
+material belongs to the slide's "Detail: pane or route?" walkthrough and to
+Tasks 5/6, not to what a participant following task-4.md alone would be
+expected to produce.
+
+---
