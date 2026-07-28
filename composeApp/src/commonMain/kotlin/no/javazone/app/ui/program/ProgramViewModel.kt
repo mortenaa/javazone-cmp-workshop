@@ -13,10 +13,9 @@ import no.javazone.app.data.ProgramRepository
 /**
  * Owns the program data and favorites; the UI only sends [ProgramIntent]s.
  *
- * Task 5 version: the program comes from a [ProgramRepository]
- * (network -> cache -> bundled), which sets the offline flag. Favorites are
- * still an in-memory [Set] — Task 6 gives them a persistent home without
- * changing this class's public surface.
+ * Task 6 version: favorites are persisted through [ProgramRepository] (SQLite
+ * on Android/iOS/Desktop, localStorage on Wasm, behind one `expect` seam) —
+ * this class never learns which storage engine is behind it.
  */
 class ProgramViewModel(
     private val repository: ProgramRepository = ProgramRepository(),
@@ -27,6 +26,11 @@ class ProgramViewModel(
 
     init {
         loadProgram()
+        viewModelScope.launch {
+            repository.favoriteIds.collect { ids ->
+                _state.update { it.copy(favoriteIds = ids) }
+            }
+        }
     }
 
     fun onIntent(intent: ProgramIntent) {
@@ -41,7 +45,7 @@ class ProgramViewModel(
                 it.copy(activeFormats = emptySet(), activeLanguages = emptySet(), searchQuery = "")
             }
             is ProgramIntent.ToggleFavorite ->
-                _state.update { it.copy(favoriteIds = it.favoriteIds.toggle(intent.sessionId)) }
+                viewModelScope.launch { repository.toggleFavorite(intent.sessionId) }
             is ProgramIntent.SelectSession -> _state.update { it.copy(selectedSessionId = intent.sessionId) }
             ProgramIntent.Retry -> loadProgram()
             ProgramIntent.DismissOfflineBanner -> _state.update { it.copy(offlineBannerDismissed = true) }

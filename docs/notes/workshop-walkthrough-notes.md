@@ -438,3 +438,48 @@ Block 4 testing slide): a real fetch against the live URL now succeeds
 falls back to bundled data with `isOffline=true` — the fallback chain
 itself is correct.
 
+---
+
+## Task 6 — Persist favorites
+
+✅ This task was the smoothest of the six — everything in task-6.md's steps
+and hints matched the reference and worked first try. `Favorites.sq` /
+`ProgramCache.sq` under `commonMain/sqldelight/...`, the generated
+`favoritesQueries`/`programCacheQueries`, `FavoritesStore`/`ProgramCache` as
+plain interfaces with `expect fun createFavoritesStore()`/
+`createProgramCache()`, `SqlFavoritesStore`/`SqlProgramCache` wrapping
+`asFlow().mapToList(...)`, and the four `actual`s (JDBC on JVM,
+`AndroidSqliteDriver` + the starter's already-provided `JavaZoneApp.appContext`
+on Android, `NativeSqliteDriver` on iOS, `localStorage` on wasmJs) all
+compiled clean on every target on the first attempt — including iOS, which
+I could only compile (no simulator here), and wasmJs, where there genuinely
+is no SQLite driver, exactly as the task doc says.
+
+✅ **Verified actual disk persistence, not just "it compiles."** Rather than
+trust that `SqlFavoritesStore` writes through, I toggled a favorite via a
+scratch JVM test calling `createFavoritesStore().setFavorite(id, true)`,
+then read the database file back with a **completely separate process** —
+the `sqlite3` CLI, not any code sharing memory with the test — pointed at
+`~/.javazone2026/javazone.db`: `SELECT * FROM favorite;` returned the row.
+That's about as close to "kill the app and relaunch" as I could get without
+a GUI to click a star and restart a window, and it confirms the SQLite path
+genuinely persists to disk rather than just satisfying the in-process
+`Flow`. I also ran the full `:composeApp:run` afterward and confirmed the
+same `javazone.db` file gets created on ordinary app startup with no
+exceptions.
+
+✅ The one thing I couldn't verify end-to-end is exactly the thing the task
+doc itself flags as out of reach for some attendees: real Android/iOS
+persistence via `AndroidSqliteDriver`/`NativeSqliteDriver` on an actual
+device or simulator (no emulator image, no full Xcode here) — the README's
+"Windows/Linux note" about skipping the iOS `actual` describes a version of
+this same limitation, just for a different reason (no Mac vs. no
+emulator/simulator here). This is squarely an environment gap on my end, not
+a doc issue — the code is identical to `checkpoint-6` and compiles for both
+targets.
+
+💡 No notes on unclear or wrong instructions for this task — task-6.md's
+Hint 2/3 code blocks are complete and accurate enough to build the whole
+feature from without needing to consult `checkpoint-6` at all, which was
+a nice contrast after Tasks 4 and 5.
+
