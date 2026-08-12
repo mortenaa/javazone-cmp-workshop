@@ -27,7 +27,7 @@ essential.
 5. **Test it:** turn wifi off, relaunch → real data with the offline banner.
 
 The hosted URL is real:
-`https://raw.githubusercontent.com/mortenaa/javazone-cmp-workshop/main/program.json`
+`https://mortenaa.github.io/javazone-cmp-workshop/program.json`
 
 ## Hints
 
