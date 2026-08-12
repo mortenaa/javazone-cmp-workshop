@@ -26,7 +26,7 @@ essential.
    `Retry` intent; show the `OfflineBanner` when offline.
 5. **Test it:** turn wifi off, relaunch → real data with the offline banner.
 
-The hosted URL is real (GitHub Pages, serves proper `application/json` + CORS):
+The hosted URL is real:
 `https://mortenaa.github.io/javazone-cmp-workshop/program.json`
 
 ## Hints
