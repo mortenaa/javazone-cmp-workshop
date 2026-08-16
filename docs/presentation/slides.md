@@ -59,6 +59,8 @@ git checkout checkpoint-3
 
 ^ If your Gradle sync is still running: that's fine, we have 30 minutes of talking before you need a working build.
 
+^ For anyone whose environment is misbehaving: the KMP plugin ships a "Project Environment Preflight Checks" tool window in the IDE (double-tap Shift, type "preflight") — it checks JDK, Android SDK and Xcode and says exactly what's missing. Faster than us guessing over your shoulder; SETUP.md §4 has it, along with kdoctor for the terminal-minded.
+
 ---
 
 # [fit] Block 0
@@ -225,7 +227,7 @@ git checkout checkpoint-3
 - **Share logic + UI** — everything in Kotlin *(today's approach)*
 - **Hybrid** — shared Compose UI, native components embedded where needed (maps, web views, camera)
 
-^ You don't have to go all-in. Plenty of production KMP apps share only the domain layer and keep fully native UIs — that's the lowest-risk entry point and the classic pitch to an iOS team. Today we take the maximal path, 100% shared UI, because it teaches the most in four hours. The honest guidance: shared Compose UI is usually good enough, and the hybrid escape hatch exists for the places it isn't.
+^ You don't have to go all-in. Plenty of production KMP apps share only the domain layer and keep fully native UIs — that's the lowest-risk entry point and the classic pitch to an iOS team. Today we take the maximal path, 100% shared UI, because it teaches the most in four hours. Our advice: shared Compose UI is usually good enough, and the hybrid escape hatch exists for the places it isn't.
 
 ^ Foreshadowing: our venue map screen deliberately avoids native map SDKs and stays in pure Compose — we'll point at it later as a "degrees of sharing" decision in the wild.
 
@@ -243,7 +245,7 @@ git checkout checkpoint-3
 - Adaptive: phone, tablet, desktop, browser
 - Live data via Ktor, offline fallback
 
-^ This is the finished app — the screenshot shows it on desktop in the JavaZone dark theme and on a phone. It's a genuinely useful app: the real JavaZone 2026 program, 156 sessions, searchable, with your personal schedule persisted locally. Every task today builds a slice of it, and the complete source is checkpoint-6 in the repo.
+^ This is the finished app — the screenshot shows it on desktop in the JavaZone dark theme and on a phone. It's an actually useful app: the real JavaZone 2026 program, 156 sessions, searchable, with your personal schedule persisted locally. Every task today builds a slice of it, and the complete source is checkpoint-6 in the repo.
 
 ^ Design constraint worth stating: every file in this app is small enough to fit on a slide. That's not an accident — the app is teaching material first.
 
@@ -266,6 +268,34 @@ iosApp/              Xcode wrapper project
 ^ One Gradle module, five source sets. Almost everything we write today lands in commonMain — that's the point. The platform source sets exist for the thin edges: app entry points, and the storage drivers we'll meet in Block 3. iosApp is a small Xcode project that embeds the Kotlin framework; you only open it to run on an iOS device or simulator.
 
 ^ commonMain code can't see platform APIs; platform source sets see commonMain plus their whole native world. The compiler enforces this, which is what makes the sharing trustworthy.
+
+---
+
+# Heads-up: new projects look different (AGP 9)
+
+**This workshop (AGP 8.x)** — one module does everything:
+
+```
+composeApp/          KMP + Android app in ONE module
+  src/androidMain/     MainActivity lives here
+iosApp/
+```
+
+**New projects (AGP 9+)** — the Android app moves out:
+
+```
+androidApp/          com.android.application — MainActivity, manifest
+composeApp/          com.android.kotlin.multiplatform.library
+  src/androidMain/     only expect/actual stays here
+iosApp/
+```
+
+- AGP 9 forbids `com.android.application` + the KMP plugin **in the same module**
+- Shared module: `androidTarget {}` → `androidLibrary {}` (new dedicated plugin)
+
+^ If you generate a fresh project from the KMP wizard after AGP 9, it won't match what you built today — say this now so nobody thinks the workshop taught them an obsolete layout. What changed: AGP 9.0 dropped support for applying com.android.application or com.android.library together with org.jetbrains.kotlin.multiplatform in one module. The replacement is a dedicated Android-KMP library plugin, com.android.kotlin.multiplatform.library, with its own `androidLibrary {}` DSL block inside `kotlin {}` — and the Android *app* entry point (MainActivity, manifest, Android resources) moves into its own small androidApp module that depends on the shared one. Structurally it then looks just like iOS already does: a thin platform host (androidApp, iosApp) around one shared module.
+
+^ Why we teach the old layout anyway: this project pins AGP 8.13 on purpose (see SETUP.md — don't bump it), because the single-module version is simpler to navigate in a 4-hour workshop, and everything conceptual — source sets, expect/actual, per-source-set dependencies — is identical in both layouts. Migration is mechanical, and there's an official guide: kotlinlang.org/docs/multiplatform/multiplatform-project-agp-9-migration.html. Escape hatch if someone asks: `android.enableLegacyVariantApi=true` keeps the old layout building on AGP 9, but it's removed in AGP 10 (expected H2 2026), so it buys time, not a future.
 
 ---
 
@@ -430,7 +460,7 @@ fun LoadingState(modifier: Modifier = Modifier) {
 }
 ```
 
-^ This is a complete, real screen state from the app. A composable is a function annotated with @Composable that *emits* UI — it doesn't return a view object, it describes what should exist. You build UIs by composing functions that call functions: LoadingState calls Column, which wraps a progress indicator and a text.
+^ This is a complete, real screen state from the app — provided in your starter under `ui/components/States.kt`, you'll wire it up in Block 2. A composable is a function annotated with @Composable that *emits* UI — it doesn't return a view object, it describes what should exist. You build UIs by composing functions that call functions: LoadingState calls Column, which wraps a progress indicator and a text.
 
 ^ Things to point at: naming is PascalCase like a class, because conceptually it's a UI element, not an action. Parameters are plain data plus an optional Modifier — that trailing `modifier` parameter with a default is *the* Compose convention, and every component you write today should have one.
 
@@ -569,6 +599,8 @@ val slots = remember(state) { state.daySlots(state.selectedDay) }
 `…/ui/components/SessionCard.kt`
 
 ```kotlin
+import org.jetbrains.compose.ui.tooling.preview.Preview   // ⚠️ not the androidx one!
+
 @Preview
 @Composable
 private fun SessionCardPreview() {
@@ -588,6 +620,8 @@ private fun SessionCardPreviewDark() {
 
 ^ Previews render a composable in the IDE without launching anything. You wrap your component in the theme, feed it fixture data — `sampleSession` is a fixture in the starter — and see light and dark variants side by side. Since Compose Multiplatform 1.10 there's a single common `@Preview` annotation that works in commonMain, so these previews live right next to the shared code.
 
+^ Point at the import line — it's on the slide for a reason: the IDE will offer `androidx.compose.ui.tooling.preview.Preview` first, and the compiler's deprecation warning even tells you to switch to it — but with this project's dependencies that import doesn't exist on iOS/wasm. It compiles fine on desktop, so the breakage only surfaces when someone builds iOS hours later. Use `org.jetbrains.compose.ui.tooling.preview.Preview` and ignore the deprecation warning today.
+
 ^ Previews are static; for interactive iteration the desktop target plus Hot Reload is the power tool, demoed in Block 4. In Task 1, starting from the preview and building the card inside it is the intended workflow.
 
 ---
@@ -605,10 +639,13 @@ private fun SessionCardPreviewDark() {
 3. Title: `titleMedium`, `maxLines = 2`, ellipsis; star `IconButton` to the right
 4. Add the `FormatBadge` sub-composable (colored `Surface` + label)
 5. `@Preview` it with `sampleSession` — light *and* dark
+   (import: `org.jetbrains.compose.ui.tooling.preview.Preview`)
 
 ^ Your first composable, and the single most reused component in the app — everything else displays lists of these. The task doc has the full spec: which typography roles, which colors for which format, and the accessibility requirement that the star's contentDescription must include the session title. Hints are collapsible; try without them first.
 
-^ Time-box gently: the core card takes most people 15 minutes, the FormatBadge is the stretch within the task. Anyone racing ahead can add the `selected` highlight parameter — it becomes load-bearing in Task 3. Compare with checkpoint-1 when done.
+^ Repeat the @Preview import warning from two slides ago while people work — anyone who lets the IDE pick the androidx import has planted a silent iOS/wasm build failure for later. The task doc has the callout in bold.
+
+^ Time-box gently: the core card takes most people 15 minutes, the FormatBadge is the stretch within the task. Anyone racing ahead can add the `selected` highlight parameter — Task 3 actually uses it. Compare with checkpoint-1 when done.
 
 ---
 
@@ -709,9 +746,11 @@ LazyColumn(
 2. Group by day and time slot with `toConferenceDays()` (provided)
 3. `LazyColumn` of `SessionCard`s with `stickyHeader` time slots
 4. `PrimaryTabRow` day tabs: Tue / Wed / Thu
-5. Empty day? Use `EmptyState`
+5. Wire the `EmptyState` fallback for a day with no slots
 
 ^ Now the card meets real data. The starter provides the JSON loading and the grouping logic — the data layer is Block 3's business — so this task is purely about assembling the list UI: LazyColumn, stickyHeader, keys, tabs. Selected-day state is a plain `remember { mutableStateOf(...) }` in the screen for now; moving it somewhere proper is exactly what Block 2 is about, and feeling that pain first is intentional.
+
+^ Manage expectations on step 5: with the real data every day has sessions, so nobody will *see* the EmptyState fire today — it's defensive wiring that becomes real once Task 4 adds filters. Say so, or someone will burn ten minutes hunting for an empty day.
 
 ^ Checkpoint-2 if the grouping fights you. Fast finishers: wire up the day tabs so each day keeps its own scroll position, or add the FilterChipsRow from the finished app.
 
@@ -725,7 +764,7 @@ LazyColumn(
 | **Medium** | 600–839 dp | `NavigationRail` (left) | single pane |
 | **Expanded** | ≥ 840 dp | `NavigationRail` (left) | **list-detail** |
 
-^ Headline topic from the abstract: the same code must feel right on a phone, a tablet, a desktop window and a browser. Material's answer is window size classes — buckets instead of pixel-perfect breakpoints. We use the two canonical width breakpoints, 600 and 840 dp, and deliberately ignore height classes: an acceptable simplification for a 4-hour workshop, and we're saying it out loud.
+^ Headline topic from the abstract: the same code must feel right on a phone, a tablet, a desktop window and a browser. Material's answer is window size classes — buckets instead of pixel-perfect breakpoints. We use the two canonical width breakpoints, 600 and 840 dp, and deliberately ignore height classes: an acceptable simplification for a 4-hour workshop, and we say so.
 
 ^ The sentence to remember: **two breakpoints, two independent decisions.** Only the navigation container changes at 600 dp; only the pane layout changes at 840 dp. Resize a desktop window across both and you cross all three columns of this table live.
 
@@ -818,7 +857,7 @@ fun ListDetailLayout(
 }
 ```
 
-^ The complete file — this is the entire two-pane implementation, a weighted Row with two slots. On a phone, tapping a card navigates to a detail screen; on a desktop, tapping a card sets a `selectedSessionId` and this second pane renders it. Same SessionDetailContent composable in both hosts: **one detail composable, two hosts** is the reuse punchline.
+^ The complete file — this is the entire two-pane implementation, a weighted Row with two slots. On a phone, tapping a card navigates to a detail screen; on a desktop, tapping a card sets a `selectedSessionId` and this second pane renders it. Same SessionDetailContent composable in both hosts: **one detail composable, two hosts** is the takeaway.
 
 ^ Read the doc comment: on big screens, "detail" is *state*, not a *destination*. That distinction is the bridge into Block 2, where we make it concrete in the navigation code. (material3-adaptive has a fancier ListDetailPaneScaffold; the weighted Row is the beginner-proof baseline we teach.)
 
@@ -838,7 +877,7 @@ fun ListDetailLayout(
 - All state, ViewModels, routes, theme
 - Touch, mouse and keyboard handling
 
-^ Say this out loud in the room, because it's the actual sales pitch of today: the adaptive layer is two small files, and *everything else is byte-for-byte the same code* on a phone and a 27-inch monitor. SessionCard doesn't know how wide the window is. There is not a single expect/actual in the UI.
+^ Give this one some weight, because it's the sales pitch of the day: the adaptive layer is two small files, and *everything else is byte-for-byte the same code* on a phone and a 27-inch monitor. SessionCard doesn't know how wide the window is. There is not a single expect/actual in the UI.
 
 ^ Keyboard support came for free because we only used stock M3 clickable components — tab through cards, Enter activates, Esc goes back on desktop. The one place we do custom pointer handling, the map, is also where we had to hand-build a reset button so keyboard users aren't locked out. Free lunch ends where custom drawing begins.
 
@@ -860,6 +899,8 @@ fun ListDetailLayout(
 
 ^ The payoff task of Block 1. Step 5 is not optional — the moment where you drag the desktop window narrower and watch the rail become a bottom bar is the demo you'll be showing your team next week. The starter has the four destinations as an enum; the task doc includes the NavigationBarItem/RailItem code shape so nobody drowns in parameters.
 
+^ Tell the room the detail pane is allowed to be a placeholder — a title and a "select a session" message is enough. checkpoint-3 contains a fleshed-out SessionDetailContent, so people comparing afterward may think they under-delivered; they didn't, the real detail screen is Task 4 material.
+
 ^ The selection-state plumbing (step 4) is intentionally a bit awkward while state still lives inside composables — one more nudge toward Block 2. Checkpoint-3 gets everyone level before the architecture block. Then: break.
 
 ---
@@ -869,7 +910,7 @@ fun ListDetailLayout(
 
 ### 45 min — hoisting · UDF · MVVM vs MVI · navigation · Task 4
 
-^ Block 1 left us with state scattered across screens in `remember` blocks. This block moves it somewhere it can be tested, shared between screens, and survive rotation — and we talk honestly about the architecture alphabet soup.
+^ Block 1 left us with state scattered across screens in `remember` blocks. This block moves it somewhere it can be tested, shared between screens, and survive rotation — and we sort through the architecture alphabet soup.
 
 ---
 
@@ -933,7 +974,7 @@ fun SessionCard(
 
 ^ The two acronyms the CFP promised. MVVM: a ViewModel exposes observable state and public methods; the UI calls methods. MVI: the UI sends *intent values* into a single entry point, and a reducer folds each intent into the next immutable state. MVI buys you a single choke point — log every intent and you have a replayable session — at the cost of more types and boilerplate.
 
-^ Honest take: for most teams the difference matters less than the discipline both enforce — immutable state, single source of truth, events up. Frameworks fight over the last 10%. Our app deliberately sits between the two, next slide.
+^ Our take: for most teams the difference matters less than the discipline both enforce — immutable state, single source of truth, events up. Frameworks fight over the last 10%. Our app deliberately sits between the two, next slide.
 
 ---
 
@@ -1022,7 +1063,7 @@ class ProgramViewModel(
 
 ^ Yes, this is androidx.lifecycle.ViewModel — in common code, running on iOS and in a browser. JetBrains ships multiplatform builds of the lifecycle and navigation libraries, so the idioms Android developers already know transfer wholesale. The private MutableStateFlow / public read-only StateFlow pair is the standard encapsulation: only the ViewModel writes.
 
-^ `viewModelScope` is a coroutine scope tied to the ViewModel's lifetime — when the ViewModel is cleared, in-flight work is cancelled. In `init` it subscribes to the favorites Flow from the repository, so favorites persist-and-update reactively once Block 3 plugs in real storage. Manual constructor injection with a default — no DI framework today, and honestly you often don't need one.
+^ `viewModelScope` is a coroutine scope tied to the ViewModel's lifetime — when the ViewModel is cleared, in-flight work is cancelled. In `init` it subscribes to the favorites Flow from the repository, so favorites persist-and-update reactively once Block 3 plugs in real storage. Manual constructor injection with a default — no DI framework today, and you often don't need one.
 
 ---
 
@@ -1049,7 +1090,7 @@ fun onIntent(intent: ProgramIntent) {
 
 ^ The single entry point. Most intents are one-liners: copy the state with one field changed — `update` does an atomic compare-and-set on the StateFlow, so concurrent updates can't lose writes. The `when` over a sealed type is exhaustive: forget a branch and it won't compile.
 
-^ Where it's honest about not being pure MVI: ToggleFavorite doesn't update state at all — it fires a suspend call at the repository, and the new favorites arrive back through the Flow subscription from the previous slide. State follows storage, so the UI can never show a favorite that failed to persist. A strict reducer would need an effects system for this; the pragmatic version is six lines.
+^ Where this departs from pure MVI: ToggleFavorite doesn't update state at all — it fires a suspend call at the repository, and the new favorites arrive back through the Flow subscription from the previous slide. State follows storage, so the UI can never show a favorite that failed to persist. A strict reducer would need an effects system for this; the pragmatic version is six lines.
 
 ---
 
@@ -1173,7 +1214,7 @@ var searchActive by rememberSaveable { mutableStateOf(false) }
 
 ### 45 min — Ktor · serialization · SQLDelight · expect/actual · Tasks 5–6
 
-^ The app looks real but lies: it reads a bundled file, and favorites evaporate on restart. This block adds the real data layer — network, caching, persistence — all in common code, until the exact point where common code becomes impossible. That's the expect/actual moment, and it's the best teaching seam in the whole app.
+^ The app looks real but lies: it reads a bundled file, and favorites evaporate on restart. This block adds the real data layer — network, caching, persistence — all in common code, until the exact point where common code becomes impossible. That's the expect/actual moment, and it's the best teaching moment in the whole app.
 
 ---
 
@@ -1233,6 +1274,8 @@ class ProgramApi(
 
 ^ The whole client. ContentNegotiation plugs kotlinx.serialization into Ktor, so `.body()` deserializes straight into our DTO. `suspend` all the way down — Ktor is coroutine-native, and this suspend function is happily called from viewModelScope on every platform.
 
+^ One nuance worth a sentence: ContentNegotiation matches converters by the response's Content-Type header — it only deserializes types you've registered. Our host (GitHub Pages) sends a proper application/json, so the plain json() registration is all we need. If there's time, tell the story: an earlier draft fetched from raw.githubusercontent.com, which labels .json as text/plain — every fetch threw NoTransformationFoundException on a 200, and the fallback chain hid it perfectly. If you ever see that exception on a healthy response, the server is mislabeling the content type. Header negotiation is a different layer from ignoreUnknownKeys/isLenient (next slide), which are about the JSON body.
+
 ^ Dwell on the HttpTimeout line, because it encodes hard-won conference wisdom: flaky wifi usually doesn't *fail*, it *hangs*. Without a timeout, "network then fallback" becomes "spinner forever". Five seconds, then we fall back — and the fallback is the same JSON bundled as a compose resource, so the app is useful with zero connectivity. Also note the constructor takes the client with a default: that one decision is what makes this testable with a mock engine in Block 4.
 
 ---
@@ -1265,7 +1308,7 @@ data class SessionDto(
 
 ^ kotlinx.serialization: annotate a data class, get compile-time-generated serializers — no reflection, which is exactly why it works on Kotlin/Native and Wasm where reflection-based mappers can't. The DTO mirrors the real JavaZone "sleepingpill" API.
 
-^ The Json configuration block is the honest part. Default kotlinx.serialization is strict, and the real feed will betray you: fields we don't model (ignoreUnknownKeys — also future-proofing against the API adding fields), and the odd not-quite-spec value (isLenient). Defaults make fields optional — note room and startTime are nullable *by design*: the 2026 schedule isn't published yet, and the UI's "Time TBA" handling flows from these two nulls.
+^ The Json configuration block is where the real world leaks in. Default kotlinx.serialization is strict, and the real feed will betray you: fields we don't model (ignoreUnknownKeys — also future-proofing against the API adding fields), and the odd not-quite-spec value (isLenient). Defaults make fields optional — note room and startTime are nullable *by design*: the 2026 schedule isn't published yet, and the UI's "Time TBA" handling flows from these two nulls.
 
 ---
 
@@ -1334,9 +1377,9 @@ suspend fun loadSessions(): ProgramLoad = try {
 4. Wire `isLoading` / `loadFailed` into the ViewModel; add `Retry`
 5. Test it: turn wifi off and relaunch → offline banner over real data
 
-^ Shorter task, mostly assembling pieces you've now seen. The URL constant is in the starter. Step 5 is the fun one — flip your wifi off and the app should shrug and keep working with the banner up. That's the behavior you'll wish every airline app had.
+^ Shorter task, mostly assembling pieces you've now seen. The task doc gives you the URL to paste into your own `PROGRAM_URL` constant — it is NOT pre-declared in the starter. Step 5 is the fun one — flip your wifi off and the app should shrug and keep working with the banner up. That's the behavior you'll wish every airline app had.
 
-^ Watch for: forgetting the timeout (infinite spinner on the venue wifi — the irony writes itself), and swallowing CancellationException in the catch. Both are called out in the task doc. Checkpoint-5 when the banner shows.
+^ Watch for: forgetting the timeout (infinite spinner on the venue wifi — the irony writes itself), and swallowing CancellationException in the catch. Both are called out in the task doc. General debugging tell for a silently-failing fetch: the offline banner showing while wifi is ON. Checkpoint-5 when the banner shows only with wifi off.
 
 ---
 
@@ -1484,7 +1527,7 @@ actual fun createFavoritesStore(): FavoritesStore = LocalStorageFavoritesStore()
 
 ^ Both sides of the seam. Three platforms hand the shared SqlFavoritesStore their driver and are done — one line each. The web target implements the same interface over the browser's localStorage, with a StateFlow standing in for SQLDelight's change notifications. Comma-joined IDs in a single key: crude, and completely adequate for a favorites list.
 
-^ The punchline to deliver slowly: the repository, the ViewModel, every screen — none of them changed. Favorites now survive restart on all four platforms, through two entirely different storage technologies, and the seam is one expect function. This is the expect/actual mechanism doing exactly the job it was designed for. (kotlinx.browser gives us localStorage as a typed Kotlin API, no JS interop by hand.)
+^ The point to deliver slowly: the repository, the ViewModel, every screen — none of them changed. Favorites now survive restart on all four platforms, through two entirely different storage technologies, and the seam is one expect function. This is the expect/actual mechanism doing exactly the job it was designed for. (kotlinx.browser gives us localStorage as a typed Kotlin API, no JS interop by hand.)
 
 ---
 
@@ -1559,7 +1602,7 @@ kotlin {
 
 ^ The only two pieces of configuration in the whole story, both already in your project. The foojay resolver lets Gradle download JVM toolchains on demand — that's how the JetBrains Runtime appears without anyone installing it by hand — and jvmToolchain(21) pins the version Hot Reload needs. This is also why the setup script ran a first build for you: it triggered the JBR download while you were on home wifi.
 
-^ Limitations, honestly: JVM desktop target only — you iterate on desktop and the shared UI carries the result to the other platforms. IntelliJ and Android Studio also reload on save with the run-configuration integration.
+^ Limitations: JVM desktop target only — you iterate on desktop and the shared UI carries the result to the other platforms. IntelliJ and Android Studio also reload on save with the run-configuration integration.
 
 ---
 
@@ -1587,7 +1630,7 @@ private class FakeFavoritesStore : FavoritesStore {
 
 ^ Tests in commonTest run on *every* target — the same test class executes on the JVM, on Kotlin/Native and in a browser, which regularly catches platform-specific surprises for free. Plain kotlin.test, no platform frameworks.
 
-^ Note what made the fake trivial: FavoritesStore is a two-member interface, so the in-memory fake is six lines — no mocking library needed (most JVM mocking libraries won't run on Native anyway; on KMP, hand-rolled fakes are the idiom, and honestly they age better). This is the payoff of the interfaces-plus-constructor-injection choices from Blocks 2 and 3.
+^ Note what made the fake trivial: FavoritesStore is a two-member interface, so the in-memory fake is six lines — no mocking library needed (most JVM mocking libraries won't run on Native anyway; on KMP, hand-rolled fakes are the idiom, and they age better). This is the payoff of the interfaces-plus-constructor-injection choices from Blocks 2 and 3.
 
 ---
 
@@ -1696,7 +1739,7 @@ fun networkFailureFallsBackAndShowsOfflineBanner() = runTest {
 - 👤 **Speaker list** — new screen + route, group sessions by speaker
 - 🔄 **Pull-to-refresh** on the program list
 
-^ For the fast, the curious, and the flight home. The first three exist complete in checkpoint-6 — read MapScreen.kt even if you build nothing: pinch-zoom, scroll-wheel zoom and tappable markers in ~180 lines of common code is a nice existence proof that "custom" doesn't require leaving Compose. The last two are genuinely open — the speaker list is a proper feature (model, route, screen) and a good first solo flight without a checkpoint to lean on.
+^ For the fast, the curious, and the flight home. The first three exist complete in checkpoint-6 — read MapScreen.kt even if you build nothing: pinch-zoom, scroll-wheel zoom and tappable markers in ~180 lines of common code is good proof that "custom" doesn't require leaving Compose. The last two have no reference implementation — the speaker list is a proper feature (model, route, screen) and a good first solo flight without a checkpoint to lean on.
 
 ---
 

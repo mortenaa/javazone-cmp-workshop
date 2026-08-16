@@ -26,8 +26,8 @@ essential.
    `Retry` intent; show the `OfflineBanner` when offline.
 5. **Test it:** turn wifi off, relaunch → real data with the offline banner.
 
-The hosted URL is real:
-`https://raw.githubusercontent.com/mortenaa/javazone-cmp-workshop/main/program.json`
+The hosted URL is real (GitHub Pages, serves proper `application/json` + CORS):
+`https://mortenaa.github.io/javazone-cmp-workshop/program.json`
 
 ## Hints
 
@@ -37,6 +37,11 @@ The hosted URL is real:
 Two gotchas to avoid up front: (1) don't forget the `HttpTimeout` — without it a
 stalled connection gives you an infinite spinner; (2) in the repository's `catch`,
 **rethrow `CancellationException`** before catching everything else.
+
+To *prove* the network path works (and not just the fallback), watch the
+offline banner: online → no banner; wifi off → banner. If the banner shows
+even with wifi on, your fetch is failing silently — check the logs for the
+actual exception before assuming the wifi is at fault.
 </details>
 
 <details>
@@ -81,7 +86,9 @@ persistence is Task 6. Full `ProgramApi` / `ProgramRepository` in `checkpoint-5`
 
 ## Done when…
 
-- [ ] With connectivity, the program loads from the network.
+- [ ] With connectivity, the program loads from the network — **no offline
+      banner**. (Banner showing while online = the fetch is silently failing;
+      see Hint 1.)
 - [ ] With wifi off, the app falls back to bundled data and shows the offline
       banner (dismissible) instead of an error.
 - [ ] `Retry` re-attempts the fetch.

@@ -53,7 +53,11 @@ covers every task**, and we demo iOS from the stage.
    and confirm with `java -version`. Installing *exactly* 21 is optional — this JDK
    only starts Gradle; see the note below on the toolchain that builds the app.
 2. **Install IntelliJ IDEA or Android Studio**, then add the **Kotlin
-   Multiplatform plugin** and restart the IDE.
+   Multiplatform plugin** and restart the IDE. Once the project is open, run the
+   plugin's **Project Environment Preflight Checks** (open it via *Search
+   Everywhere* — double-tap Shift, type "preflight"): it checks your JDK,
+   Android SDK/emulator and (on a Mac) Xcode setup from inside the IDE and
+   points at exactly what's missing. Green checks here = ready for the workshop.
 3. **Install the Android SDK.** Easiest via Android Studio:
    *Settings → Languages & Frameworks → Android SDK* → install the latest SDK
    platform + build tools, and accept the licenses.
@@ -77,7 +81,8 @@ git clone https://github.com/mortenaa/javazone-cmp-workshop.git
 cd javazone-cmp-workshop
 
 # The important one — run at home, on good wifi.
-# Downloads all dependencies + the JDK 21 toolchain and prints a ✅/❌ summary.
+# Downloads all dependencies, the JDK 21 toolchain AND the web target's one-time
+# Node/webpack toolchain, then prints a ✅/❌ summary.
 ./gradlew verifySetup
 ```
 
@@ -127,7 +132,10 @@ This project uses **Android Gradle Plugin 8.13.x on purpose**. AGP 9 cannot buil
 an Android *application* together with a Kotlin Multiplatform module in a single
 Gradle module — the combination we use here. Do not bump AGP. All versions are
 pinned in `gradle/libs.versions.toml` and frozen for the workshop; please don't
-change them.
+change them. (New projects generated for AGP 9+ use a different layout — a
+separate `androidApp` module plus the `com.android.kotlin.multiplatform.library`
+plugin; see the [official migration guide](https://kotlinlang.org/docs/multiplatform/multiplatform-project-agp-9-migration.html)
+if you want to modernize your own fork after the workshop.)
 
 ### Gradle sync is slow / times out on conference wifi
 
@@ -148,16 +156,24 @@ Run `xcode-select --install`, then open Xcode once to finish its first-run
 setup. You need the *full* Xcode (not just the command line tools) to actually
 run the app on a simulator.
 
-### Diagnose a broken KMP setup with `kdoctor`
+### Diagnose a broken KMP setup: Preflight Checks / `kdoctor`
 
-[`kdoctor`](https://github.com/Kotlin/kdoctor) checks your whole Kotlin
-Multiplatform environment (JDK, Android SDK, Xcode, CocoaPods) and tells you
-exactly what's missing:
+Two tools that inspect your whole KMP environment and tell you exactly what's
+missing:
 
-```bash
-brew install kdoctor   # macOS
-kdoctor
-```
+- **In the IDE:** the Kotlin Multiplatform plugin's **Project Environment
+  Preflight Checks** tool window (find it via *Search Everywhere* — double-tap
+  Shift, type "preflight"). Checks JDK, Android SDK/emulator and Xcode, with
+  fix-it hints per item. Works on all OSes and is the first thing to look at
+  when a target won't build.
+- **On the command line (macOS):** [`kdoctor`](https://github.com/Kotlin/kdoctor)
+  does the same environment scan (JDK, Android SDK, Xcode, CocoaPods) in the
+  terminal:
+
+  ```bash
+  brew install kdoctor   # macOS
+  kdoctor
+  ```
 
 ### Still stuck?
 

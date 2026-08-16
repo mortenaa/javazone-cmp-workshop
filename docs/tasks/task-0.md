@@ -19,11 +19,16 @@ platform. Almost everything you write today lands in `commonMain`.
    ```
    You should see a window: **"JavaZone 2026 — N sessions loaded"**.
 2. **Run on Android** from the IDE: pick the `composeApp` run configuration and an
-   emulator, then run.
+   emulator, then run. (No IDE / no emulator? `./gradlew :composeApp:assembleDebug`
+   proves the Android build works, and
+   `./gradlew :composeApp:installDebug` installs on a connected device.)
 3. **Web:**
    ```bash
    ./gradlew :composeApp:wasmJsBrowserDevelopmentRun
    ```
+   > The *first* run sets up a local Node/webpack toolchain. If you ran
+   > `./gradlew verifySetup` at home this is already downloaded; otherwise expect
+   > a few minutes of one-time downloads.
 4. **Mac users:** run the iOS app via the `iosApp` run configuration (or open
    `iosApp/iosApp.xcodeproj` in Xcode).
 5. **Tour the source.** Open `composeApp/src/` and find the five source sets:
@@ -38,7 +43,8 @@ platform. Almost everything you write today lands in `commonMain`.
   DTO→domain mapping. **Provided** — you won't touch the wire format.
 - `ui/theme/Theme.kt` — the JavaZone Material 3 colours.
 - `ui/components/` — small provided helpers: `SampleData`, `EmptyState`,
-  `StarOutlineIcon`, date/format helpers.
+  `LoadingState`/`ErrorState` (in `States.kt`), `StarOutlineIcon`, date/format
+  helpers.
 - `composeResources/files/program.json` — the bundled program, so the app works
   offline from day one.
 

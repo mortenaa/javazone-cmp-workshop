@@ -36,6 +36,7 @@ tasks.register("verifySetup") {
     // Compiling these targets resolves all common/jvm/wasm dependencies and
     // triggers the JDK 21 toolchain download (via the foojay resolver).
     dependsOn(":composeApp:compileKotlinJvm", ":composeApp:compileKotlinWasmJs", ":composeApp:jvmTest")
+    dependsOn(":composeApp:wasmJsBrowserDevelopmentWebpack")
     if (androidSdkDir != null) dependsOn(":composeApp:compileDebugKotlinAndroid")
     if (isMac) dependsOn(":composeApp:compileKotlinIosSimulatorArm64")
 

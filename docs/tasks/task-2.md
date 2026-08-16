@@ -90,7 +90,8 @@ screen + tabs.
 - [ ] All sessions render, grouped under sticky time-slot headers.
 - [ ] Day tabs switch which day is shown.
 - [ ] Toggling a star updates the card (local state is fine for now).
-- [ ] An empty day shows the `EmptyState`.
+- [ ] The `EmptyState` fallback is wired for a day with no slots (you can't
+      trigger it with the real data yet — that arrives with Task 4's filters).
 
 ## Expected result
 

@@ -83,7 +83,8 @@ for extra challenges if you finish early.
 - The domain model (`model/`) and the API DTOs + mapping (`data/ProgramDto.kt`).
 - The Material 3 theme with the JavaZone colours (`ui/theme/Theme.kt`).
 - A few small shared pieces you'll reach for: `SampleData` (for previews),
-  `EmptyState`, `StarOutlineIcon`, and date/format helpers.
+  `EmptyState`, `LoadingState`/`ErrorState`, `StarOutlineIcon`, and date/format
+  helpers.
 - The conference program as bundled data (`composeResources/files/program.json`)
   so the app works fully offline from day one.
 
@@ -93,11 +94,16 @@ persistence layer — i.e. the app.
 
 ## The data
 
-The bundled `program.json` (and the copy at the repo root, served over the
-network in Task 5) is the JavaZone 2026 program. It is generated from the public
+The bundled `program.json` (and the copy at the repo root, served in Task 5
+via GitHub Pages at
+`https://mortenaa.github.io/javazone-cmp-workshop/program.json`) is the
+JavaZone 2026 program. It is generated from the public
 JavaZone program feed; the generator lives in the workshop's planning repo
 (`tools/enrich-program.py`). If you regenerate it, keep the repo-root copy and
 `composeApp/src/commonMain/composeResources/files/program.json` identical.
+
+TODO: Add the real program with real timeslots instead of generating when the program is finalized
+
 
 ## License
 

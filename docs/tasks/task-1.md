@@ -23,6 +23,15 @@ you compose functions from `Column`/`Row`/`Box` and Material 3 components, and
    *names* the format (colour is never the only signal).
 6. `@Preview` it with `sampleSession` — one **light**, one **dark**.
 
+> **⚠️ The `@Preview` import matters.** Use
+> `import org.jetbrains.compose.ui.tooling.preview.Preview` — the one that works
+> in `commonMain` on **all four targets** with this project's dependencies. Your
+> IDE will likely offer `androidx.compose.ui.tooling.preview.Preview` first (and
+> the compiler even prints a deprecation warning nudging you toward it) — but
+> that import **doesn't resolve on iOS/Wasm** here, and the failure only shows up
+> when someone first compiles those targets, much later in the day. Ignore the
+> deprecation warning for today.
+
 ## Hints
 
 <details>
@@ -56,6 +65,8 @@ app, but for Task 1 a plain `IconButton` with `Icons.Filled.Star` /
 <summary>Hint 3 — code</summary>
 
 ```kotlin
+import org.jetbrains.compose.ui.tooling.preview.Preview  // NOT the androidx one!
+
 @Composable
 fun SessionCard(
     session: Session,

@@ -2,7 +2,7 @@
 
 For the fast, the curious, and the flight home. Two flavours: some have a full
 reference implementation (in `checkpoint-6` or a dedicated branch), some are
-genuinely open.
+completely open.
 
 ## With a reference implementation
 
@@ -12,7 +12,7 @@ A zoomable, pannable venue map in **pure Compose** — `Image` +
 `Modifier.graphicsLayer` transforms, with tappable room markers overlaid. No
 native map SDK, so it's 100% common code. Even if you build nothing, read
 `ui/map/MapScreen.kt` and `MapTransform.kt`: pinch-zoom, scroll-wheel zoom and
-tappable markers in ~180 lines is a nice existence proof that "custom" doesn't
+tappable markers in ~180 lines is good proof that "custom" doesn't
 mean leaving Compose.
 
 *Reference:* `ui/map/` in `checkpoint-6` (`MapScreen`, `MapTransform`,
@@ -21,7 +21,7 @@ mean leaving Compose.
 ### 🔍 Search polish
 
 An app-bar search field that drives `ProgramIntent.Search`, toggled open/closed
-with `rememberSaveable`. Note the deliberate teaching wart: the *open* flag is
+with `rememberSaveable`. Note the intentional quirk: the *open* flag is
 saveable (survives process death) but the *query* lives in the ViewModel (does
 not) — a documented lesson about the three tiers of state survival.
 

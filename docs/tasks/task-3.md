@@ -25,6 +25,11 @@ is just state — on desktop it updates live as you drag the window edge.
    when `expanded`, otherwise just `list()`.
 5. Track a `selectedSessionId` and pass `selected = session.id == selectedSessionId`
    into `SessionCard` so the chosen card highlights in the two-pane view.
+   **The detail pane itself can be a placeholder** — the selected session's title
+   plus an `EmptyState`/"select a session" message when nothing is selected is
+   plenty. The real detail screen is Task 4 material (`checkpoint-3` already
+   contains a fleshed-out `SessionDetailContent`, so don't worry if yours looks
+   sparser than the checkpoint — the layout mechanics are what this task is about).
 6. **Run on Desktop and resize** across 600 dp and 840 dp — watch it adapt.
 
 ## Hints
@@ -59,6 +64,19 @@ fun currentWindowWidth(): WindowWidth {
 `NavigationBarItem` (bar) and `NavigationRailItem` (rail) take the same
 `selected` / `onClick` / `icon` / `label` — drive both from
 `TopDestination.entries` so they can't drift apart.
+
+If your Task 1 `SessionCard` declared `selected` but never *used* it, now is
+the time to wire it up:
+
+```kotlin
+Card(
+    onClick = onClick,
+    colors = if (selected)
+        CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+    else CardDefaults.cardColors(),
+    // …
+)
+```
 </details>
 
 <details>
@@ -82,7 +100,7 @@ fun ListDetailLayout(
 }
 ```
 
-The punchline: on a wide screen "detail" is a **second pane** (state), on a phone
+The point: on a wide screen "detail" is a **second pane** (state), on a phone
 it's a **pushed destination** (navigation). Full `AdaptiveScaffold` is in
 `checkpoint-3`.
 </details>

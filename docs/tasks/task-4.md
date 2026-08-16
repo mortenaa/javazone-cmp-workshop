@@ -17,9 +17,10 @@ do"), and a `ViewModel` exposing a `StateFlow`, collected in the UI with
 ## Steps
 
 1. `ProgramUiState` — a `data class` holding `sessions`, `favoriteIds`,
-   `selectedDay`, `activeFormats`, `searchQuery`, `selectedSessionId`, plus derived
-   helpers (`daySlots(day)`, `session(id)`). Put the **filtering logic here**, as
-   pure functions of the state — not in composables.
+   `selectedDay`, `activeFormats`, `activeLanguages`, `searchQuery`,
+   `selectedSessionId`, plus derived helpers (`daySlots(day)`, `session(id)`).
+   Put the **filtering logic here**, as pure functions of the state — not in
+   composables. (Loading/offline fields like `isLoading` arrive in Task 5.)
 2. `ProgramIntent` — a `sealed interface`: `SelectDay`, `ToggleFormat`,
    `ToggleLanguage`, `Search`, `ClearFilters`, `ToggleFavorite`, `SelectSession`,
    `Retry`, `DismissOfflineBanner`.
@@ -83,6 +84,10 @@ composable("session/{sessionId}") { entry ->
     }
 }
 ```
+
+If you want to be extra careful, the provided `LoadingState` (in
+`ui/components/States.kt`) covers the "route resolved but the program hasn't
+loaded yet" edge case — `checkpoint-4` uses it there.
 
 Navigate with `navController.navigate("session/$sessionId")`. Full `App.kt`,
 `ProgramScreen`, `ScheduleScreen` and the detail screens are in `checkpoint-4`.
