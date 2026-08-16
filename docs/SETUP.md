@@ -61,7 +61,7 @@ covers every task**, and we demo iOS from the stage.
 3. **Install the Android SDK.** Easiest via Android Studio:
    *Settings → Languages & Frameworks → Android SDK* → install the latest SDK
    platform + build tools, and accept the licenses.
-4. **Create one Android emulator**: *Device Manager → Create device* → pick any
+4. **Create one Android emulator**: *Tools → Device Manager → Create device* → pick any
    recent phone + a recent system image.
 5. **(Mac) Install Xcode** and run `xcode-select --install`.
 6. **Clone the repo and verify** (see below).
