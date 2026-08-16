@@ -8,3 +8,4 @@ local.properties
 xcuserdata/
 Pods/
 iosApp/iosApp.xcodeproj/project.xcworkspace/
+kotlin-js-store/
