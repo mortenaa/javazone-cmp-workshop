@@ -1,0 +1,65 @@
+# Task 0 — Run it and tour the project
+
+**Goal:** get the starter app running on at least one target, and find your way
+around the project structure.
+
+**Start from:** a fresh clone of `main` · **Finished result:** `main` builds and runs
+
+## Theory recap
+
+See the *Block 0 — Why multiplatform?* slides: one Kotlin codebase, five source
+sets (`commonMain` + one per platform), and one `App()` composable hosted by each
+platform. Almost everything you write today lands in `commonMain`.
+
+## Steps
+
+1. **Desktop first** — it's the fastest, no emulator needed:
+   ```bash
+   ./gradlew :composeApp:run
+   ```
+   You should see a window: **"JavaZone 2026 — N sessions loaded"**.
+2. **Run on Android** from the IDE: pick the `composeApp` run configuration and an
+   emulator, then run. (No IDE / no emulator? `./gradlew :composeApp:assembleDebug`
+   proves the Android build works, and
+   `./gradlew :composeApp:installDebug` installs on a connected device.)
+3. **Web:**
+   ```bash
+   ./gradlew :composeApp:wasmJsBrowserDevelopmentRun
+   ```
+   > The *first* run sets up a local Node/webpack toolchain. If you ran
+   > `./gradlew verifySetup` at home this is already downloaded; otherwise expect
+   > a few minutes of one-time downloads.
+4. **Mac users:** run the iOS app via the `iosApp` run configuration (or open
+   `iosApp/iosApp.xcodeproj` in Xcode).
+5. **Tour the source.** Open `composeApp/src/` and find the five source sets:
+   `commonMain`, `androidMain`, `iosMain`, `jvmMain`, `wasmJsMain`. Then open
+   `commonMain/kotlin/no/javazone/app/App.kt` — this is what Task 1 grows into a
+   real UI.
+
+## Where things live
+
+- `model/` — the domain model (`Session`, `Speaker`, `Format`, `TimeSlot`).
+- `data/ProgramDto.kt` — the API DTOs, the JSON parser, and the
+  DTO→domain mapping. **Provided**.
+- `ui/theme/Theme.kt` — the JavaZone Material 3 colours.
+- `ui/components/` — small provided helpers: `SampleData`, `EmptyState`,
+  `LoadingState`/`ErrorState` (in `States.kt`), `StarOutlineIcon`, date/format
+  helpers.
+- `composeResources/files/program.json` — the bundled program, so the app works
+  offline
+
+## Done when…
+
+- [ ] The Desktop app runs and shows "N sessions loaded".
+- [ ] You've run at least **one** target (Desktop, Android, Web, or iOS on a Mac).
+- [ ] You can point at `commonMain` and at least one platform source set.
+
+## Expected result
+
+A window (or emulator/browser) showing the JavaZone title, the number of loaded
+sessions, and a hint pointing at `docs/tasks/task-1.md`. Nothing interactive yet
+
+## Troubleshooting
+
+Anything failing here (Android SDK, emulator, Xcode tools) is
+covered in **[../SETUP.md](../SETUP.md)**. Grab one of us if you're stuck.
