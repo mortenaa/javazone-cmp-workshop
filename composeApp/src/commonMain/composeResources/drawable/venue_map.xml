@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Placeholder schematic floor plan in brand colors (DESIGN.md §3.6).
+     A vector instead of a PNG: tiny, crisp at any zoom, still "one image".
+     Marker positions live in VenueMarkers.kt as normalized coordinates,
+     so a real Oslo Spektrum plan can replace this file without code changes. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="512dp"
+    android:height="384dp"
+    android:viewportWidth="2048"
+    android:viewportHeight="1536">
+
+    <!-- background: cloud dancer -->
+    <path
+        android:fillColor="#F0EEE9"
+        android:pathData="M0,0 h2048 v1536 h-2048 Z" />
+
+    <!-- outer wall: slate blue-gray -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#8FB2C6"
+        android:strokeWidth="12"
+        android:pathData="M40,40 h1968 v1456 h-1968 Z" />
+
+    <!-- expo / partner area on the arena floor: sea mist with reef-teal wall -->
+    <path
+        android:fillColor="#BEE8E6"
+        android:strokeColor="#094D55"
+        android:strokeWidth="8"
+        android:pathData="M674,558 h700 v420 h-700 Z" />
+
+    <!-- Room I -->
+    <path
+        android:fillColor="#0B3554"
+        android:pathData="M178,228 h300 v220 h-300 Z" />
+    <!-- Room II -->
+    <path
+        android:fillColor="#0B3554"
+        android:pathData="M628,136 h300 v220 h-300 Z" />
+    <!-- Room III -->
+    <path
+        android:fillColor="#0B3554"
+        android:pathData="M1120,136 h300 v220 h-300 Z" />
+    <!-- Room IV -->
+    <path
+        android:fillColor="#0B3554"
+        android:pathData="M1570,228 h300 v220 h-300 Z" />
+    <!-- Room V -->
+    <path
+        android:fillColor="#0B3554"
+        android:pathData="M1570,996 h300 v220 h-300 Z" />
+    <!-- Room VI (lightning talks): reef teal -->
+    <path
+        android:fillColor="#094D55"
+        android:pathData="M1120,1180 h300 v220 h-300 Z" />
+    <!-- Room VII -->
+    <path
+        android:fillColor="#0B3554"
+        android:pathData="M178,996 h300 v220 h-300 Z" />
+
+    <!-- entrance: sunbeam gold, bottom center -->
+    <path
+        android:fillColor="#F2C14E"
+        android:pathData="M614,1436 h300 v60 h-300 Z" />
+</vector>
