@@ -2,7 +2,6 @@ package no.javazone.app
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,6 +31,7 @@ import no.javazone.app.ui.components.LoadingState
 import no.javazone.app.ui.detail.SessionDetailScreen
 import no.javazone.app.ui.favorites.ScheduleScreen
 import no.javazone.app.ui.info.InfoScreen
+import no.javazone.app.ui.map.MapScreen
 import no.javazone.app.ui.program.ProgramIntent
 import no.javazone.app.ui.program.ProgramScreen
 import no.javazone.app.ui.program.ProgramViewModel
@@ -107,14 +107,7 @@ fun App() {
                         )
                     }
                     composable(TopDestination.Info.route) { InfoScreen() }
-                    composable(TopDestination.Map.route) {
-                        // The venue map is a Task 6 stretch — placeholder until then.
-                        EmptyState(
-                            icon = Icons.Outlined.Place,
-                            title = "Venue map",
-                            body = "Coming in Task 6.",
-                        )
-                    }
+                    composable(TopDestination.Map.route) { MapScreen() }
                     composable("session/{sessionId}") { entry ->
                         // The route argument is the source of truth: it survives Android
                         // process death, where the ViewModel's selection state does not.

@@ -17,14 +17,7 @@ import no.javazone.app.data.ProgramRepository
 import no.javazone.app.model.Session
 import no.javazone.app.model.toConferenceDays
 
-/**
- * Owns the program data and favorites; the UI only sends [ProgramIntent]s.
- *
- * Task 5 version: the program now comes from a [ProgramRepository]
- * (network -> cache -> bundled), which sets the offline flag. Favorites are
- * still an in-memory [Set] — Task 6 gives them a persistent home without
- * changing this class's public surface.
- */
+/** Owns the program data and favorites; the UI only sends [ProgramIntent]s. */
 class ProgramViewModel(
     private val repository: ProgramRepository = ProgramRepository(),
 ) : ViewModel() {
@@ -34,6 +27,11 @@ class ProgramViewModel(
 
     init {
         loadProgram()
+        viewModelScope.launch {
+            repository.favoriteIds.collect { ids ->
+                _state.update { it.copy(favoriteIds = ids) }
+            }
+        }
     }
 
     fun onIntent(intent: ProgramIntent) {
@@ -49,7 +47,7 @@ class ProgramViewModel(
                     it.copy(activeFormats = emptySet(), activeLanguages = emptySet(), searchQuery = "")
                 }
             is ProgramIntent.ToggleFavorite ->
-                _state.update { it.copy(favoriteIds = it.favoriteIds.toggle(intent.sessionId)) }
+                viewModelScope.launch { repository.toggleFavorite(intent.sessionId) }
             is ProgramIntent.SelectSession -> _state.update { it.copy(selectedSessionId = intent.sessionId) }
             ProgramIntent.DismissOfflineBanner -> _state.update { it.copy(offlineBannerDismissed = true) }
             ProgramIntent.Retry -> loadProgram()
@@ -60,7 +58,8 @@ class ProgramViewModel(
         viewModelScope.launch {
             // Every (re)load resets the banner dismissal: it may reappear on a
             // failed refresh and disappears for real once a fetch succeeds (§3.7).
-            // The full-screen spinner only shows when there is nothing to look at.
+            // The full-screen spinner only shows when there is nothing to look at;
+            // a Refresh with data on screen stays in the background.
             _state.update {
                 it.copy(isLoading = it.sessions.isEmpty(), loadFailed = false, offlineBannerDismissed = false)
             }
@@ -77,7 +76,7 @@ class ProgramViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Never replace a visible list with the error screen.
+                // Same rule as loading: never replace a visible list with the error screen.
                 _state.update { it.copy(isLoading = false, loadFailed = it.sessions.isEmpty()) }
             }
         }

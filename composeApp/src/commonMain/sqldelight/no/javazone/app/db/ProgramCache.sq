@@ -1,0 +1,11 @@
+-- Single-row cache holding the raw JSON of the last successful program fetch.
+CREATE TABLE IF NOT EXISTS program_cache (
+    id INTEGER NOT NULL PRIMARY KEY,
+    json TEXT NOT NULL
+);
+
+select:
+SELECT json FROM program_cache WHERE id = 0;
+
+upsert:
+INSERT OR REPLACE INTO program_cache(id, json) VALUES (0, ?);
