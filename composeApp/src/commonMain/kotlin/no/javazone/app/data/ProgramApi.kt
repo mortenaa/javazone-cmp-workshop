@@ -10,7 +10,7 @@ import no.javazone.app.resources.Res
 
 /** The hosted program feed; the bundled resource is the offline fallback. */
 const val PROGRAM_URL =
-    "https://mortenaa.github.io/javazone-cmp-workshop/program.json"
+    "https://raw.githubusercontent.com/mortenaa/javazone-cmp-workshop/main/program.json"
 
 /**
  * Fetches the conference program. The Ktor engine is chosen by the
