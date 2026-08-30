@@ -447,49 +447,51 @@ fun App() {
             wasExpanded = expanded
         }
 
-        AdaptiveScaffold(windowWidth, currentRoute, onNavigate = ::navigateTopLevel) {
-            NavHost(navController, startDestination = TopDestination.Program.route) {
-                composable(TopDestination.Program.route) {
-                    ProgramScreen(state, viewModel::onIntent, expanded, onOpenSession = ::openSession)
-                }
-                composable(TopDestination.Schedule.route) {
-                    ScheduleScreen(
-                        state = state,
-                        onIntent = viewModel::onIntent,
-                        expanded = expanded,
-                        onOpenSession = ::openSession,
-                        onBrowseProgram = { navigateTopLevel(TopDestination.Program.route) },
-                    )
-                }
-                composable(TopDestination.Info.route) { InfoScreen() }
-                composable(TopDestination.Map.route) {
-                    // The venue map is a Task 6 stretch — placeholder until then.
-                    EmptyState(
-                        icon = Icons.Outlined.Place,
-                        title = "Venue map",
-                        body = "Coming in Task 6.",
-                    )
-                }
-                composable("session/{sessionId}") { entry ->
-                    // The route argument is the source of truth: it survives Android
-                    // process death, where the ViewModel's selection state does not.
-                    val sessionId = entry.arguments?.read { getStringOrNull("sessionId") }
-                    val session = state.session(sessionId)
-                    when {
-                        session != null -> SessionDetailScreen(
-                            session = session,
-                            isFavorite = session.id in state.favoriteIds,
-                            onBack = { navController.navigateUp() },
-                            onToggleFavorite = { viewModel.onIntent(ProgramIntent.ToggleFavorite(session.id)) },
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            AdaptiveScaffold(windowWidth, currentRoute, onNavigate = ::navigateTopLevel) {
+                NavHost(navController, startDestination = TopDestination.Program.route) {
+                    composable(TopDestination.Program.route) {
+                        ProgramScreen(state, viewModel::onIntent, expanded, onOpenSession = ::openSession)
+                    }
+                    composable(TopDestination.Schedule.route) {
+                        ScheduleScreen(
+                            state = state,
+                            onIntent = viewModel::onIntent,
+                            expanded = expanded,
+                            onOpenSession = ::openSession,
+                            onBrowseProgram = { navigateTopLevel(TopDestination.Program.route) },
                         )
-                        state.isLoading -> LoadingState()
-                        else -> EmptyState(
-                            icon = Icons.Outlined.Warning,
-                            title = "Session not found",
-                            body = "This session is not in the current program.",
-                            actionLabel = "Back to program",
-                            onAction = { navigateTopLevel(TopDestination.Program.route) },
+                    }
+                    composable(TopDestination.Info.route) { InfoScreen() }
+                    composable(TopDestination.Map.route) {
+                        // The venue map is a Task 6 stretch — placeholder until then.
+                        EmptyState(
+                            icon = Icons.Outlined.Place,
+                            title = "Venue map",
+                            body = "Coming in Task 6.",
                         )
+                    }
+                    composable("session/{sessionId}") { entry ->
+                        // The route argument is the source of truth: it survives Android
+                        // process death, where the ViewModel's selection state does not.
+                        val sessionId = entry.arguments?.read { getStringOrNull("sessionId") }
+                        val session = state.session(sessionId)
+                        when {
+                            session != null -> SessionDetailScreen(
+                                session = session,
+                                isFavorite = session.id in state.favoriteIds,
+                                onBack = { navController.navigateUp() },
+                                onToggleFavorite = { viewModel.onIntent(ProgramIntent.ToggleFavorite(session.id)) },
+                            )
+                            state.isLoading -> LoadingState()
+                            else -> EmptyState(
+                                icon = Icons.Outlined.Warning,
+                                title = "Session not found",
+                                body = "This session is not in the current program.",
+                                actionLabel = "Back to program",
+                                onAction = { navigateTopLevel(TopDestination.Program.route) },
+                            )
+                        }
                     }
                 }
             }

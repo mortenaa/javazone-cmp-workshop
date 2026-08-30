@@ -4,14 +4,9 @@ import kotlinx.datetime.LocalDate
 import no.javazone.app.model.Format
 import no.javazone.app.model.Session
 import no.javazone.app.model.TimeSlot
+import no.javazone.app.model.toConferenceDays
 
-/**
- * Single immutable snapshot of everything the program screens render.
- *
- * Task 4 starting point: the fields are all here so the provided screens
- * compile — your job is to fill out the TODO bodies (the filtering logic)
- * and build the ViewModel that owns this state.
- */
+/** Single immutable snapshot of everything the program screens render. */
 data class ProgramUiState(
     val isLoading: Boolean = true,
     val loadFailed: Boolean = false,
@@ -25,20 +20,35 @@ data class ProgramUiState(
     val searchQuery: String = "",
     val selectedSessionId: String? = null,
 ) {
-    /** Tabs always show all days, even when filters empty one of them. */
-    val dayTabs: List<LocalDate> by lazy { TODO("Task 4: every conference day, from sessions.toConferenceDays()") }
+    /** Tabs always show all days, even when filters empty one of them. Lazy: computed once per state instance. */
+    val dayTabs: List<LocalDate> by lazy { sessions.toConferenceDays().map { it.date } }
 
     val hasActiveFilters: Boolean
-        get() = TODO("Task 4: any format/language filter or search active?")
+        get() = activeFormats.isNotEmpty() || activeLanguages.isNotEmpty() || searchQuery.isNotBlank()
 
-    val showOfflineBanner: Boolean
-        get() = TODO("Task 4: offline and not dismissed")
+    val showOfflineBanner: Boolean get() = isOffline && !offlineBannerDismissed
 
-    fun session(id: String?): Session? = TODO("Task 4: look the session up by id")
+    fun session(id: String?): Session? = sessions.firstOrNull { it.id == id }
 
     /** The selected day's slots with format/language filters applied (Program tab). */
-    fun daySlots(day: LocalDate?): List<TimeSlot> = TODO("Task 4: filter sessions, then group into the day's slots")
+    fun daySlots(day: LocalDate?): List<TimeSlot> =
+        sessions.filter { it.matchesFilters() }.slotsFor(day)
 
     /** The selected day's favorited sessions, unfiltered (My Schedule tab). */
-    fun favoriteSlots(day: LocalDate?): List<TimeSlot> = TODO("Task 4: favorites only, grouped into the day's slots")
+    fun favoriteSlots(day: LocalDate?): List<TimeSlot> =
+        sessions.filter { it.id in favoriteIds }.slotsFor(day)
+
+    private fun Session.matchesFilters(): Boolean =
+        (activeFormats.isEmpty() || format in activeFormats) &&
+            (activeLanguages.isEmpty() || language in activeLanguages) &&
+            matchesSearch()
+
+    /** Case-insensitive substring match on title and speaker names (DESIGN.md §3.1). */
+    private fun Session.matchesSearch(): Boolean =
+        searchQuery.isBlank() ||
+            title.contains(searchQuery, ignoreCase = true) ||
+            speakers.any { it.name.contains(searchQuery, ignoreCase = true) }
+
+    private fun List<Session>.slotsFor(day: LocalDate?): List<TimeSlot> =
+        toConferenceDays().firstOrNull { it.date == day }?.slots.orEmpty()
 }
