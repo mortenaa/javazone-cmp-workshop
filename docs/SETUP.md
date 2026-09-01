@@ -30,7 +30,7 @@ covers every task**, and we demo iOS from the stage.
   You do *not* need to install JDK 21 by hand: the build provisions the JDK 21
   toolchain automatically (part of what `verifySetup` triggers). See the note
   below on *why 21 specifically* and the launcher-vs-toolchain distinction.
-- **IntelliJ IDEA** (2025.1+) **or Android Studio** (latest stable), with the
+- **IntelliJ IDEA** (2026.2+ needed for full support) **or Android Studio** (latest stable), with the
   **Kotlin Multiplatform plugin** installed (Settings → Plugins → Marketplace →
   search "Kotlin Multiplatform").
 - **Android SDK** + one **emulator** image (comes with Android Studio).
